@@ -2,6 +2,7 @@
 
 import type { Cart, LineItem } from "@spree/sdk";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   createContext,
   type ReactNode,
@@ -11,6 +12,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { toast } from "sonner";
 import {
   addToCart as addToCartAction,
   getCart as getCartAction,
@@ -41,6 +43,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const t = useTranslations("cart");
 
   const openCart = useCallback(() => setIsOpen(true), []);
   const closeCart = useCallback(() => setIsOpen(false), []);
@@ -63,7 +66,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         cart?: Cart | null;
         error?: string;
       }>,
-      errorLabel: string,
+      fallbackMessage: string,
       onSuccess?: () => void,
     ) => {
       setUpdating(true);
@@ -74,10 +77,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
           onSuccess?.();
           router.refresh();
         } else {
-          console.error(`Failed to ${errorLabel}:`, result.error);
+          toast.error(result.error || fallbackMessage);
         }
       } catch (error) {
-        console.error(`Failed to ${errorLabel}:`, error);
+        toast.error(error instanceof Error ? error.message : fallbackMessage);
       } finally {
         setUpdating(false);
       }
@@ -89,31 +92,31 @@ export function CartProvider({ children }: { children: ReactNode }) {
     async (variantId: string, quantity = 1) => {
       await mutateCart(
         () => addToCartAction(variantId, quantity),
-        "add item to cart",
+        t("failedToAddItem"),
         () => setIsOpen(true),
       );
     },
-    [mutateCart],
+    [mutateCart, t],
   );
 
   const updateItem = useCallback(
     async (lineItemId: string, quantity: number) => {
       await mutateCart(
         () => updateCartItemAction(lineItemId, quantity),
-        "update cart item",
+        t("failedToUpdateItem"),
       );
     },
-    [mutateCart],
+    [mutateCart, t],
   );
 
   const removeItem = useCallback(
     async (lineItemId: string) => {
       await mutateCart(
         () => removeCartItemAction(lineItemId),
-        "remove cart item",
+        t("failedToRemoveItem"),
       );
     },
-    [mutateCart],
+    [mutateCart, t],
   );
 
   // Re-fetch cart on navigation (e.g., after checkout completes, the stale

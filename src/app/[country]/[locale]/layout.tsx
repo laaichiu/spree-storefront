@@ -5,6 +5,7 @@ import { CartDrawer } from "@/components/cart/CartDrawer";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CartProvider } from "@/contexts/CartContext";
 import { StoreProvider } from "@/contexts/StoreContext";
 import { getMarkets } from "@/lib/data/markets";
 import { generateStoreMetadata } from "@/lib/metadata/store";
@@ -80,10 +81,12 @@ export default async function CountryLocaleLayout({
         initialMarkets={markets}
       >
         <AuthProvider>
-          <JsonLd data={buildOrganizationJsonLd()} />
-          {children}
-          <CartDrawer />
-          <Toaster />
+          <CartProvider>
+            <JsonLd data={buildOrganizationJsonLd()} />
+            {children}
+            <CartDrawer />
+            <Toaster />
+          </CartProvider>
         </AuthProvider>
       </StoreProvider>
     </NextIntlClientProvider>

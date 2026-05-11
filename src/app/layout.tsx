@@ -5,7 +5,6 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { Suspense } from "react";
-import { CartProvider } from "@/contexts/CartContext";
 import { getStoreDescription, getStoreName } from "@/lib/store";
 
 const gtmId = process.env.GTM_ID;
@@ -54,9 +53,7 @@ export default function RootLayout({
       <body
         className={`${geist.variable} antialiased min-h-screen flex flex-col`}
       >
-        <Suspense fallback={null}>
-          <CartProvider>{children}</CartProvider>
-        </Suspense>
+        <Suspense fallback={null}>{children}</Suspense>
         <Analytics />
         <SpeedInsights />
       </body>

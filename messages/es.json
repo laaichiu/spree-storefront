@@ -88,7 +88,10 @@
     "removeItemLabel": "Eliminar {name}",
     "giftCard": "Tarjeta regalo",
     "storeCredit": "Credito de la tienda",
-    "amountDue": "Importe pendiente"
+    "amountDue": "Importe pendiente",
+    "failedToAddItem": "No se pudo agregar este articulo a tu carrito. Por favor, intentalo de nuevo.",
+    "failedToUpdateItem": "No se pudo actualizar tu carrito. Por favor, intentalo de nuevo.",
+    "failedToRemoveItem": "No se pudo eliminar este articulo de tu carrito. Por favor, intentalo de nuevo."
   },
   "products": {
     "allProducts": "Todos los productos",
