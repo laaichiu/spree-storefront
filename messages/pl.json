@@ -88,7 +88,10 @@
     "removeItemLabel": "Usuń {name}",
     "giftCard": "Karta podarunkowa",
     "storeCredit": "Kredyt sklepowy",
-    "amountDue": "Do zapłaty"
+    "amountDue": "Do zapłaty",
+    "failedToAddItem": "Nie udało się dodać tego produktu do koszyka. Spróbuj ponownie.",
+    "failedToUpdateItem": "Nie udało się zaktualizować koszyka. Spróbuj ponownie.",
+    "failedToRemoveItem": "Nie udało się usunąć tego produktu z koszyka. Spróbuj ponownie."
   },
   "products": {
     "allProducts": "Wszystkie produkty",

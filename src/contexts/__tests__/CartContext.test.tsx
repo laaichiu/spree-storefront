@@ -9,6 +9,15 @@ vi.mock("@/lib/data/cart", () => ({
   removeCartItem: vi.fn(),
 }));
 
+vi.mock("sonner", () => ({
+  toast: { error: vi.fn(), success: vi.fn() },
+}));
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => key,
+}));
+
+import { toast } from "sonner";
 import { CartProvider, useCart } from "@/contexts/CartContext";
 import {
   addToCart,
@@ -21,6 +30,7 @@ const mockGetCart = vi.mocked(getCart);
 const mockAddToCart = vi.mocked(addToCart);
 const mockUpdateCartItem = vi.mocked(updateCartItem);
 const mockRemoveCartItem = vi.mocked(removeCartItem);
+const mockToastError = vi.mocked(toast.error);
 
 const mockCart = {
   id: "cart-1",
@@ -112,10 +122,7 @@ describe("CartContext", () => {
       expect(result.current.updating).toBe(false);
     });
 
-    it("logs error and does not update cart on failure", async () => {
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+    it("shows error toast and does not update cart on failure", async () => {
       mockAddToCart.mockResolvedValue({
         success: false as const,
         error: "Out of stock",
@@ -132,11 +139,26 @@ describe("CartContext", () => {
       });
 
       expect(result.current.cart).toBe(mockCart); // unchanged
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Failed to add item to cart:",
-        "Out of stock",
-      );
-      consoleSpy.mockRestore();
+      expect(mockToastError).toHaveBeenCalledWith("Out of stock");
+    });
+
+    it("shows fallback toast when server error message is empty", async () => {
+      mockAddToCart.mockResolvedValue({
+        success: false as const,
+        error: "",
+      });
+
+      const { result } = renderHook(() => useCart(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.addItem("variant-1");
+      });
+
+      expect(mockToastError).toHaveBeenCalledWith("failedToAddItem");
     });
   });
 

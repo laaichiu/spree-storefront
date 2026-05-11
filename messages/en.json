@@ -88,7 +88,10 @@
     "removeItemLabel": "Remove {name}",
     "giftCard": "Gift card",
     "storeCredit": "Store credit",
-    "amountDue": "Amount due"
+    "amountDue": "Amount due",
+    "failedToAddItem": "Could not add this item to your cart. Please try again.",
+    "failedToUpdateItem": "Could not update your cart. Please try again.",
+    "failedToRemoveItem": "Could not remove this item from your cart. Please try again."
   },
   "products": {
     "allProducts": "All Products",
