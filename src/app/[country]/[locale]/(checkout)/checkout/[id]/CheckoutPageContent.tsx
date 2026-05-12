@@ -178,49 +178,57 @@ function CheckoutPageContentInner({
     handleRemoveGiftCard,
   ]);
 
-  // Refresh cart data (used after coupon changes, express checkout, etc.)
-  const loadOrder = useCallback(async () => {
-    setLoading(true);
-    if (!paymentError) setError(null);
+  // Refresh cart data (used after coupon changes, express checkout, etc.).
+  // `silent` keeps the current SSR-painted view on screen while we reconcile
+  // in the background — used by the mount-time refresh that backs out
+  // Next.js router-cache/BFCache staleness.
+  const loadOrder = useCallback(
+    async (silent = false) => {
+      if (!silent) setLoading(true);
+      if (!paymentError) setError(null);
 
-    try {
-      const [cartData, market, addressesData, authStatus] = await Promise.all([
-        getCheckoutOrder(cartId),
-        resolveMarket(urlCountry).catch(() => null),
-        getAddresses(),
-        checkAuth(),
-      ]);
+      try {
+        const [cartData, market, addressesData, authStatus] = await Promise.all(
+          [
+            getCheckoutOrder(cartId),
+            resolveMarket(urlCountry).catch(() => null),
+            getAddresses(),
+            checkAuth(),
+          ],
+        );
 
-      const countriesData = market
-        ? await getMarketCountries(market.id).catch(() => ({
-            data: [] as Country[],
-          }))
-        : { data: [] as Country[] };
+        const countriesData = market
+          ? await getMarketCountries(market.id).catch(() => ({
+              data: [] as Country[],
+            }))
+          : { data: [] as Country[] };
 
-      if (!cartData) {
-        setError(tRef.current("orderNotFound"));
-        setLoading(false);
-        return;
+        if (!cartData) {
+          setError(tRef.current("orderNotFound"));
+          if (!silent) setLoading(false);
+          return;
+        }
+
+        if (cartData.current_step === "complete") {
+          routerRef.current.push(`${basePath}/order-placed/${cartId}`);
+          return;
+        }
+
+        setCart(cartData);
+        setCountries(countriesData.data);
+        setSavedAddresses(addressesData.data);
+        setIsAuthenticated(authStatus);
+
+        return cartData;
+      } catch {
+        setError(tRef.current("failedToLoadCheckout"));
+        return null;
+      } finally {
+        if (!silent) setLoading(false);
       }
-
-      if (cartData.current_step === "complete") {
-        routerRef.current.push(`${basePath}/order-placed/${cartId}`);
-        return;
-      }
-
-      setCart(cartData);
-      setCountries(countriesData.data);
-      setSavedAddresses(addressesData.data);
-      setIsAuthenticated(authStatus);
-
-      return cartData;
-    } catch {
-      setError(tRef.current("failedToLoadCheckout"));
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [cartId, urlCountry, basePath, paymentError]);
+    },
+    [cartId, urlCountry, basePath, paymentError],
+  );
 
   // On mount, refresh the cart from the server so it picks up changes the
   // user made since the page was rendered/last cached. This matters when
@@ -242,18 +250,14 @@ function CheckoutPageContentInner({
     if (initialData) {
       fireBeginCheckout(initialData.cart);
       // Reconcile silently — keep the SSR-painted sidebar until fresh data
-      // arrives, so there's no flash back to a skeleton.
-      getCheckoutOrder(cartId)
-        .then((freshCart) => {
-          if (freshCart) setCart(freshCart);
-        })
-        .catch(() => {
-          // Best-effort refresh — SSR data is already on screen
-        });
+      // arrives, so there's no flash back to a skeleton. Goes through
+      // loadOrder so completion redirect and not-found handling still run
+      // if the order changed under us.
+      loadOrder(true);
       return;
     }
     loadOrder().then(fireBeginCheckout);
-  }, [initialData, loadOrder, cartId]);
+  }, [initialData, loadOrder]);
 
   // Handle email blur — persist email as the first backend call
   const handleEmailBlur = useCallback(async (email: string) => {
