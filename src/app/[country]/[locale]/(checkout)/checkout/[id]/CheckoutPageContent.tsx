@@ -152,22 +152,12 @@ function CheckoutPageContentInner({
     return result;
   }, []);
 
-  // Track cart key for sidebar updates — useLayoutEffect so the sidebar
-  // renders on the first paint (before the browser paints the empty slot)
-  const cartKey = cart
-    ? `${cart.id}-${cart.total}-${cart.total_quantity}-${cart.amount_due ?? ""}`
-    : null;
-  const prevOrderKeyRef = useRef<string | null>(null);
-
+  // useLayoutEffect so the sidebar renders on the first paint (before the
+  // browser paints the empty slot). Always re-publish when `cart` changes —
+  // a previous ref-based "cartKey" optimization skipped updates whenever the
+  // aggregate fields it tracked happened to be unchanged, which produced
+  // stale sidebar state after item add/remove/quantity edits.
   useLayoutEffect(() => {
-    if (
-      cartKey === prevOrderKeyRef.current &&
-      prevOrderKeyRef.current !== null
-    ) {
-      return;
-    }
-    prevOrderKeyRef.current = cartKey;
-
     if (cart) {
       setSummaryContent(
         <CheckoutSidebar
@@ -182,7 +172,6 @@ function CheckoutPageContentInner({
     }
   }, [
     cart,
-    cartKey,
     setSummaryContent,
     handleApplyCode,
     handleRemoveDiscount,
@@ -233,31 +222,38 @@ function CheckoutPageContentInner({
     }
   }, [cartId, urlCountry, basePath, paymentError]);
 
-  // Only fetch on mount if we don't have initial data (e.g. client-side navigation)
+  // On mount, refresh the cart from the server so it picks up changes the
+  // user made since the page was rendered/last cached. This matters when
+  // Next.js's router cache or the browser's BFCache restores a prior view
+  // of /checkout/[id] (e.g. add item → checkout → back → add another item
+  // → checkout again) — without this, the sidebar would keep showing the
+  // first cart. SSR initial data is still used for the first paint.
   useEffect(() => {
-    if (initialData) {
-      // Fire begin_checkout analytics for SSR-loaded data
-      if (!beginCheckoutFiredRef.current && initialData.cart) {
-        try {
-          trackBeginCheckout(initialData.cart);
-        } catch {
-          // Analytics should never break checkout flow
-        }
-        beginCheckoutFiredRef.current = true;
+    const fireBeginCheckout = (cartData: Cart | null | undefined) => {
+      if (!cartData || beginCheckoutFiredRef.current) return;
+      try {
+        trackBeginCheckout(cartData);
+      } catch {
+        // Analytics should never break checkout flow
       }
+      beginCheckoutFiredRef.current = true;
+    };
+
+    if (initialData) {
+      fireBeginCheckout(initialData.cart);
+      // Reconcile silently — keep the SSR-painted sidebar until fresh data
+      // arrives, so there's no flash back to a skeleton.
+      getCheckoutOrder(cartId)
+        .then((freshCart) => {
+          if (freshCart) setCart(freshCart);
+        })
+        .catch(() => {
+          // Best-effort refresh — SSR data is already on screen
+        });
       return;
     }
-    loadOrder().then((cartData) => {
-      if (cartData && !beginCheckoutFiredRef.current) {
-        try {
-          trackBeginCheckout(cartData);
-        } catch {
-          // Analytics should never break checkout flow
-        }
-        beginCheckoutFiredRef.current = true;
-      }
-    });
-  }, [initialData, loadOrder]);
+    loadOrder().then(fireBeginCheckout);
+  }, [initialData, loadOrder, cartId]);
 
   // Handle email blur — persist email as the first backend call
   const handleEmailBlur = useCallback(async (email: string) => {
