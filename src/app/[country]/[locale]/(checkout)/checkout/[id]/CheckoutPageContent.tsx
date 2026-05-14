@@ -267,7 +267,10 @@ function CheckoutPageContentInner({
   // user added an item, went to checkout, went back, changed quantity,
   // and returned), our local `cart` keeps the old line items. CartContext
   // refreshes on every pathname change, so when its line-item fingerprint
-  // disagrees with ours, copy in the fresher cart.
+  // disagrees with ours, refetch the checkout cart so we get the new
+  // items plus recalculated totals — `contextCart` itself doesn't carry
+  // the checkout-side discount/shipping calculations, so we use it only
+  // as a staleness signal, not as the source of truth.
   //
   // We compare line items only, not totals — checkout-page mutations
   // (apply discount, select shipping, etc.) change totals locally but
@@ -281,8 +284,24 @@ function CheckoutPageContentInner({
     if (!contextCart || contextCart.id !== cartId) return;
     if (cartItemsFingerprint(contextCart) === cartItemsFingerprint(cart))
       return;
-    setCart(contextCart);
-  }, [contextCart, cartId, cart]);
+    let cancelled = false;
+    getCheckoutOrder(cartId)
+      .then((fresh) => {
+        if (cancelled || !fresh) return;
+        if (fresh.current_step === "complete") {
+          routerRef.current.push(`${basePath}/order-placed/${cartId}`);
+          return;
+        }
+        setCart(fresh);
+      })
+      .catch(() => {
+        // Best-effort refresh — keep the current cart on failure rather
+        // than wiping checkout state.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [contextCart, cartId, cart, basePath]);
 
   // Handle email blur — persist email as the first backend call
   const handleEmailBlur = useCallback(async (email: string) => {
