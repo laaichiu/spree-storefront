@@ -1,7 +1,7 @@
 /**
  * Gateway type registry for conditional SDK loading.
  *
- * Maps Spree PaymentMethod.type (Rails STI class name) to a frontend gateway
+ * Maps Spree PaymentMethod.type (API shorthand) to a frontend gateway
  * identifier so the checkout can dynamically import the right SDK component.
  *
  * Only session-based gateways need this mapping. Non-session methods
@@ -12,20 +12,41 @@
 export type GatewayId = "stripe" | "adyen" | "paypal" | "razorpay" | "unknown";
 
 /**
- * Map Spree PaymentMethod.type (STI class name) → frontend gateway ID.
+ * Map Spree PaymentMethod.type (API shorthand) → frontend gateway ID.
+ *
+ * The Store API returns `Spree::Gateway.api_type` — for provider gems
+ * that ship a top-level `Gateway` class, that's the outer module name
+ * stripped of its `Spree` prefix and underscored:
+ *
+ *   SpreeStripe::Gateway          → "stripe"
+ *   SpreeAdyen::Gateway           → "adyen"
+ *   SpreePaypalCheckout::Gateway  → "paypal_checkout"
+ *   SpreeRazorpayCheckout::Gateway → "razorpay_checkout"
+ *
+ * For gems whose shorthand already matches the frontend ID (`stripe`,
+ * `adyen`), the map mostly normalises the suffixed forms. Legacy Rails
+ * STI class names are kept for backwards compatibility with older Spree
+ * backends that haven't been upgraded yet.
+ *
  * Adding a new gateway integration is a single line here.
  */
 const GATEWAY_TYPE_MAP: Record<string, GatewayId> = {
   // Stripe (spree_stripe gem)
+  stripe: "stripe",
   "SpreeStripe::Gateway": "stripe",
   "Spree::Gateway::StripeGateway": "stripe",
   // Adyen (spree_adyen gem)
+  adyen: "adyen",
   "SpreeAdyen::Gateway": "adyen",
   "Spree::Gateway::AdyenGateway": "adyen",
   // PayPal (spree_paypal_checkout gem)
+  paypal_checkout: "paypal",
+  paypal: "paypal",
   "SpreePaypalCheckout::Gateway": "paypal",
   "Spree::Gateway::PayPalExpress": "paypal",
   // Razorpay (spree_razorpay_checkout gem)
+  razorpay_checkout: "razorpay",
+  razorpay: "razorpay",
   "SpreeRazorpayCheckout::Gateway": "razorpay",
   "Spree::Gateway::RazorpayGateway": "razorpay",
 };
