@@ -24,6 +24,7 @@ import {
 import { PolicyConsent } from "@/components/policy/PolicyConsent";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 import { useCheckout } from "@/contexts/CheckoutContext";
 import {
   trackAddPaymentInfo,
@@ -58,6 +59,22 @@ const ExpressCheckoutButton = dynamic(
   { ssr: false },
 );
 
+// Fingerprint of line-item state only. Used to detect when CartContext
+// has a different set of line items than our local checkout cart —
+// happens when Next's router cache restores a prior /checkout/[id] view
+// after the user went back, added/removed/changed quantities, and
+// returned.
+//
+// Intentionally excludes discount/total/tax/delivery fields: those
+// change as a result of checkout-page mutations (apply discount, select
+// shipping, etc.) that update local `cart` but not `contextCart`, and
+// we don't want those legitimate divergences to trigger an overwrite.
+// Line items don't change from checkout-page mutations.
+function cartItemsFingerprint(cart: Cart | null): string {
+  if (!cart) return "";
+  return (cart.items ?? []).map((i) => `${i.id}:${i.quantity}`).join(",");
+}
+
 interface CheckoutPageContentProps {
   cartId: string;
   urlCountry: string;
@@ -74,6 +91,7 @@ function CheckoutPageContentInner({
   const searchParams = useSearchParams();
   const basePath = extractBasePath(pathname);
   const { setSummaryContent } = useCheckout();
+  const { cart: contextCart } = useCart();
   const t = useTranslations("checkout");
   const tc = useTranslations("common");
   const { user, loading: authLoading } = useAuth();
@@ -152,22 +170,9 @@ function CheckoutPageContentInner({
     return result;
   }, []);
 
-  // Track cart key for sidebar updates — useLayoutEffect so the sidebar
-  // renders on the first paint (before the browser paints the empty slot)
-  const cartKey = cart
-    ? `${cart.id}-${cart.total}-${cart.total_quantity}-${cart.amount_due ?? ""}`
-    : null;
-  const prevOrderKeyRef = useRef<string | null>(null);
-
+  // useLayoutEffect so the sidebar renders on the first paint (before the
+  // browser paints the empty slot). Always re-publish when `cart` changes.
   useLayoutEffect(() => {
-    if (
-      cartKey === prevOrderKeyRef.current &&
-      prevOrderKeyRef.current !== null
-    ) {
-      return;
-    }
-    prevOrderKeyRef.current = cartKey;
-
     if (cart) {
       setSummaryContent(
         <CheckoutSidebar
@@ -182,7 +187,6 @@ function CheckoutPageContentInner({
     }
   }, [
     cart,
-    cartKey,
     setSummaryContent,
     handleApplyCode,
     handleRemoveDiscount,
@@ -258,6 +262,27 @@ function CheckoutPageContentInner({
       }
     });
   }, [initialData, loadOrder]);
+
+  // When the router cache restores a stale /checkout/[id] view (e.g. the
+  // user added an item, went to checkout, went back, changed quantity,
+  // and returned), our local `cart` keeps the old line items. CartContext
+  // refreshes on every pathname change, so when its line-item fingerprint
+  // disagrees with ours, copy in the fresher cart.
+  //
+  // We compare line items only, not totals — checkout-page mutations
+  // (apply discount, select shipping, etc.) change totals locally but
+  // don't reach CartContext, so we'd ping-pong if we keyed on those.
+  // Line items only change via cart-page mutations, which CartContext
+  // does see.
+  //
+  // Only `cart` is touched — addresses / countries / auth state are left
+  // alone, so the address form keeps typed input.
+  useEffect(() => {
+    if (!contextCart || contextCart.id !== cartId) return;
+    if (cartItemsFingerprint(contextCart) === cartItemsFingerprint(cart))
+      return;
+    setCart(contextCart);
+  }, [contextCart, cartId, cart]);
 
   // Handle email blur — persist email as the first backend call
   const handleEmailBlur = useCallback(async (email: string) => {
