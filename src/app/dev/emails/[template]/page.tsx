@@ -29,9 +29,8 @@ export default async function EmailPreviewPage({
   }
 
   const element = fixture.render();
-  const html = await render(element);
 
-  if (format === "html") {
+  if (format === "text") {
     const text = await render(element, { plainText: true });
     return (
       <pre
@@ -48,6 +47,8 @@ export default async function EmailPreviewPage({
       </pre>
     );
   }
+
+  const html = await render(element);
 
   return (
     <div
@@ -70,7 +71,7 @@ export default async function EmailPreviewPage({
         </Link>
         <strong style={{ color: "#111827" }}>{fixture.label}</strong>
         <Link
-          href={`/dev/emails/${fixture.slug}?format=html`}
+          href={`/dev/emails/${fixture.slug}?format=text`}
           style={{ marginLeft: "auto", color: "#6b7280" }}
         >
           View plain text
