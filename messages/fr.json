@@ -424,6 +424,8 @@
     "firstName": "Prenom",
     "lastName": "Nom",
     "emailAddress": "Adresse e-mail",
+    "currentPassword": "Mot de passe actuel",
+    "currentPasswordHelp": "Confirmez votre mot de passe actuel pour modifier votre adresse e-mail.",
     "saveChanges": "Enregistrer les modifications",
     "saving": "Enregistrement...",
     "profileUpdated": "Profil mis a jour avec succes !",

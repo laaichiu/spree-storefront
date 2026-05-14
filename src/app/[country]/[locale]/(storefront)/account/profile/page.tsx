@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleAlert } from "lucide-react";
+import { CircleAlert, Eye, EyeOff } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -25,27 +25,44 @@ function ProfileForm({
   refreshUser: () => Promise<void>;
 }) {
   const t = useTranslations("profile");
+  const ta = useTranslations("account");
   // Initialize form data from user props - no useEffect needed
   const [formData, setFormData] = useState({
     first_name: user.first_name || "",
     last_name: user.last_name || "",
     email: user.email || "",
   });
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  const emailChanged = formData.email.trim() !== user.email;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setPasswordError(null);
     setSaving(true);
 
-    const result = await updateCustomer(formData);
+    const result = await updateCustomer({
+      ...formData,
+      ...(emailChanged && { current_password: currentPassword }),
+    });
 
     if (result.success) {
       toast.success(t("profileUpdated"));
+      setCurrentPassword("");
+      setShowCurrentPassword(false);
       await refreshUser();
     } else {
-      setError(result.error || t("failedToUpdate"));
+      const message = result.error || t("failedToUpdate");
+      if (emailChanged && /current password/i.test(message)) {
+        setPasswordError(message);
+      } else {
+        setError(message);
+      }
     }
 
     setSaving(false);
@@ -102,6 +119,60 @@ function ProfileForm({
                 }
               />
             </Field>
+
+            {emailChanged && (
+              <Field>
+                <FieldLabel htmlFor="current_password">
+                  {t("currentPassword")}
+                </FieldLabel>
+                <div className="relative">
+                  <Input
+                    type={showCurrentPassword ? "text" : "password"}
+                    id="current_password"
+                    autoComplete="current-password"
+                    required
+                    value={currentPassword}
+                    onChange={(e) => {
+                      setCurrentPassword(e.target.value);
+                      if (passwordError) setPasswordError(null);
+                    }}
+                    placeholder="••••••••"
+                    className="pr-10"
+                    aria-invalid={passwordError ? true : undefined}
+                    aria-describedby="current_password_help"
+                  />
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() =>
+                        setShowCurrentPassword(!showCurrentPassword)
+                      }
+                      aria-label={
+                        showCurrentPassword
+                          ? ta("hidePassword")
+                          : ta("showPassword")
+                      }
+                    >
+                      {showCurrentPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <p
+                  id="current_password_help"
+                  className={`text-sm ${
+                    passwordError ? "text-red-600" : "text-gray-500"
+                  }`}
+                >
+                  {passwordError || t("currentPasswordHelp")}
+                </p>
+              </Field>
+            )}
           </div>
 
           <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">

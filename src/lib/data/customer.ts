@@ -191,6 +191,7 @@ export async function updateCustomer(data: {
   first_name?: string;
   last_name?: string;
   email?: string;
+  current_password?: string;
 }) {
   return actionResult(async () => {
     let customer;

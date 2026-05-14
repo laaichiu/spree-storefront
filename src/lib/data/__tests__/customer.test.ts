@@ -193,6 +193,21 @@ describe("customer server actions", () => {
       expect(result).toEqual({ success: true, customer: mockUser });
     });
 
+    it("forwards current_password when changing email", async () => {
+      mockClient.customer.update.mockResolvedValue(mockUser);
+
+      const result = await updateCustomer({
+        email: "new@example.com",
+        current_password: "secret",
+      });
+
+      expect(mockClient.customer.update).toHaveBeenCalledWith(
+        { email: "new@example.com", current_password: "secret" },
+        { token: "jwt-token" },
+      );
+      expect(result).toEqual({ success: true, customer: mockUser });
+    });
+
     it("returns error on failure", async () => {
       mockClient.customer.update.mockRejectedValue(new Error("Email taken"));
 
@@ -201,6 +216,22 @@ describe("customer server actions", () => {
       expect(result).toEqual({
         success: false,
         error: "Email taken",
+      });
+    });
+
+    it("surfaces invalid current password error", async () => {
+      mockClient.customer.update.mockRejectedValue(
+        new Error("Current password is invalid or missing"),
+      );
+
+      const result = await updateCustomer({
+        email: "new@example.com",
+        current_password: "wrong",
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: "Current password is invalid or missing",
       });
     });
 
