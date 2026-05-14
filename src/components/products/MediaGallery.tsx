@@ -4,8 +4,11 @@ import type { Media } from "@spree/sdk";
 import { ZoomIn } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ProductImage } from "@/components/ui/product-image";
+
+const SWIPE_THRESHOLD_PX = 50;
+const SWIPE_MAX_VERTICAL_PX = 75;
 
 /** Tiny 10×10 neutral gray PNG used as a blur placeholder while images load. */
 const BLUR_PLACEHOLDER =
@@ -63,6 +66,47 @@ function MediaGalleryInner({
     null,
   );
 
+  const safeIndex = Math.max(0, Math.min(selectedIndex, images.length - 1));
+
+  // Horizontal swipe on the main image navigates between media. When a
+  // swipe is detected we suppress the synthetic click so the lightbox
+  // doesn't open from the same gesture.
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const suppressClickRef = useRef(false);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    suppressClickRef.current = false;
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      const start = touchStartRef.current;
+      touchStartRef.current = null;
+      if (!start || images.length <= 1) return;
+      const touch = e.changedTouches[0];
+      if (!touch) return;
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+      if (
+        Math.abs(dx) < SWIPE_THRESHOLD_PX ||
+        Math.abs(dy) > SWIPE_MAX_VERTICAL_PX
+      ) {
+        return;
+      }
+      suppressClickRef.current = true;
+      const nextIndex =
+        dx < 0
+          ? (safeIndex + 1) % images.length
+          : (safeIndex - 1 + images.length) % images.length;
+      setSelectedIndex(nextIndex);
+      setMainImageErrorUrl(null);
+    },
+    [images.length, safeIndex],
+  );
+
   if (images.length === 0) {
     return (
       <div className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden">
@@ -81,7 +125,6 @@ function MediaGalleryInner({
     setMainImageErrorUrl(null);
   };
 
-  const safeIndex = Math.max(0, Math.min(selectedIndex, images.length - 1));
   const selectedImage = images[safeIndex];
   const mainImageUrl = getMainImageUrl(selectedImage);
   const showMainImage = mainImageUrl && mainImageErrorUrl !== mainImageUrl;
@@ -91,8 +134,16 @@ function MediaGalleryInner({
       {/* Main Image */}
       <button
         type="button"
-        className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden cursor-zoom-in w-full"
-        onClick={() => showMainImage && setIsZoomed(true)}
+        className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden cursor-zoom-in w-full touch-pan-y"
+        onClick={() => {
+          if (suppressClickRef.current) {
+            suppressClickRef.current = false;
+            return;
+          }
+          if (showMainImage) setIsZoomed(true);
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         aria-label={t("openImageZoom")}
         disabled={!showMainImage}
       >
