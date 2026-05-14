@@ -88,7 +88,7 @@ export function CartDrawer() {
     >
       <SheetContent
         side="right"
-        className="w-full max-w-md flex flex-col p-0 gap-0"
+        className="data-[side=right]:w-full data-[side=right]:sm:max-w-md flex flex-col p-0 gap-0"
         showCloseButton={false}
         aria-describedby={undefined}
       >

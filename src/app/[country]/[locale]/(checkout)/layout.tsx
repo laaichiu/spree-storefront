@@ -6,7 +6,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { CheckoutProvider, CheckoutSummary } from "@/contexts/CheckoutContext";
+import {
+  CheckoutProvider,
+  CheckoutSummary,
+  useCheckout,
+} from "@/contexts/CheckoutContext";
 import { POLICY_LINKS } from "@/lib/constants/policies";
 import { getStoreName } from "@/lib/store";
 import { extractBasePath } from "@/lib/utils/path";
@@ -19,7 +23,7 @@ function CheckoutHeader() {
   const t = useTranslations("checkoutLayout");
 
   return (
-    <header className="flex items-center justify-between">
+    <header className="flex items-center justify-between h-16">
       <Link href={basePath || "/"} className="flex items-center space-x-2">
         <Image
           src="/spree.png"
@@ -36,7 +40,7 @@ function CheckoutHeader() {
         aria-label={t("backToStore")}
       >
         <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-        <span className="hidden sm:inline">{t("backToStore")}</span>
+        {t("backToStore")}
       </Link>
     </header>
   );
@@ -70,6 +74,12 @@ function CheckoutFooter() {
 function MobileSummaryToggle() {
   const [isOpen, setIsOpen] = useState(false);
   const t = useTranslations("checkoutLayout");
+  const { summaryContent } = useCheckout();
+
+  // Hide the toggle entirely when there's no summary to show (e.g. the
+  // order-placed page clears summaryContent because the page already
+  // displays the order details inline).
+  if (summaryContent === null) return null;
 
   return (
     <div className="lg:hidden border-b border-gray-200 bg-gray-50">
