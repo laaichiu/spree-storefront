@@ -50,6 +50,7 @@ export function createSpreeMiddleware(
   const staticRoutes = config.staticRoutes ?? [
     "/_next",
     "/api",
+    "/dev",
     "/favicon.ico",
   ];
 

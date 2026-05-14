@@ -356,11 +356,7 @@ Templates are in `src/lib/emails/` as React components:
 
 ### Previewing Templates
 
-```bash
-npm run email:dev
-```
-
-Opens the [react-email](https://react.email) dev server with all templates and mock data for live preview.
+Run the storefront in development (`npm run dev`) and visit [http://localhost:3001/dev/emails](http://localhost:3001/dev/emails). Each template is rendered with sample data using `@react-email/render`; the route is gated to non-production environments.
 
 ### How It Works
 
