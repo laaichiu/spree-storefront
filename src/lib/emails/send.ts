@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { render } from "@react-email/render";
 import type { ReactElement } from "react";
+import { render } from "react-email";
 import { getStoreEmailFrom, isStoreEmailFromFallback } from "@/lib/store";
 
 interface SendEmailOptions {

@@ -1,6 +1,6 @@
-import { render } from "@react-email/render";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { render } from "react-email";
 import { emailFixtures, getEmailFixture } from "../fixtures";
 
 interface PreviewPageProps {
