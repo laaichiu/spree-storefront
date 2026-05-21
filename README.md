@@ -367,7 +367,9 @@ Spree Backend → Webhook POST → /api/webhooks/spree → render email → send
 
 The webhook route handler (`src/app/api/webhooks/spree/route.ts`) uses `createWebhookHandler` from `src/lib/spree/webhooks` — signature verification and event routing are handled automatically.
 
-## Deploy on Vercel
+## Deployment
+
+### Vercel
 
 The easiest way to deploy is using [Vercel](https://vercel.com/new):
 
@@ -379,6 +381,59 @@ The easiest way to deploy is using [Vercel](https://vercel.com/new):
    - `GTM_ID` (optional — Google Tag Manager)
    - `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` (optional — for error tracking with readable stack traces)
 4. Deploy
+
+### Docker
+
+A multi-stage `Dockerfile` is included at the repo root. It uses Next.js standalone output to produce a small (~240 MB) image based on `node:22-alpine`, runs as a non-root user, and exposes port `3001`.
+
+> **Note:** `SPREE_API_URL` and `SPREE_PUBLISHABLE_KEY` are required at **build time** because the storefront prerenders pages against the Spree API. Point them at a Spree instance reachable from wherever you run `docker build` (hosted Spree, tunnel, or `host.docker.internal` for a local backend on Docker Desktop).
+
+**Build:**
+
+```bash
+docker build \
+  --build-arg SPREE_API_URL=https://your-spree.example.com \
+  --build-arg SPREE_PUBLISHABLE_KEY=your_publishable_key \
+  -t spree-storefront .
+```
+
+**Run:**
+
+```bash
+docker run -p 3001:3001 --env-file .env.local spree-storefront
+```
+
+**Optional — Sentry source map upload at build time:**
+
+`SENTRY_AUTH_TOKEN` is mounted via a BuildKit secret so it never lands in image layers or the build cache. Other Sentry vars are passed as regular build args.
+
+```bash
+SENTRY_AUTH_TOKEN=... docker build \
+  --build-arg SPREE_API_URL=... \
+  --build-arg SPREE_PUBLISHABLE_KEY=... \
+  --build-arg SENTRY_DSN=... \
+  --build-arg SENTRY_ORG=... \
+  --build-arg SENTRY_PROJECT=... \
+  --secret id=sentry_auth_token,env=SENTRY_AUTH_TOKEN \
+  -t spree-storefront .
+```
+
+**Building against a local Spree backend** (Docker Desktop on macOS/Windows):
+
+```bash
+docker build \
+  --add-host=host.docker.internal:host-gateway \
+  --build-arg SPREE_API_URL=http://host.docker.internal:3000 \
+  --build-arg SPREE_PUBLISHABLE_KEY=your_publishable_key \
+  -t spree-storefront .
+
+docker run -p 3001:3001 \
+  --add-host=host.docker.internal:host-gateway \
+  --env-file .env.local \
+  spree-storefront
+```
+
+The same env vars listed under [Vercel](#vercel) apply to runtime configuration.
 
 ## License
 
