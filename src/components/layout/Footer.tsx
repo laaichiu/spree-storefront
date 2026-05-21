@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { POLICY_LINKS } from "@/lib/constants/policies";
 import { getStoreDescription, getStoreName } from "@/lib/store";
+import { CurrentYear } from "./CurrentYear";
 
 const storeName = getStoreName();
 const storeDescription = getStoreDescription();
@@ -149,7 +150,7 @@ export async function Footer({
 
         <div className="mt-8 pt-8 border-t border-neutral-800 text-xs text-neutral-400 text-center">
           <p>
-            &copy; {new Date().getFullYear()} {storeName}. {t("poweredBy")}{" "}
+            &copy; <CurrentYear /> {storeName}. {t("poweredBy")}{" "}
             <Link
               href="https://spreecommerce.org"
               target="_blank"
