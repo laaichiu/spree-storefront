@@ -11,14 +11,16 @@
 # Run:
 #   docker run -p 3001:3001 --env-file .env.local storefront
 #
-# Optional Sentry source map upload at build time (skipped when SENTRY_DSN is unset):
-#   docker build \
+# Optional Sentry source map upload at build time (skipped when SENTRY_DSN is unset).
+# SENTRY_AUTH_TOKEN is read via a BuildKit secret so it never lands in image
+# layers, history, or shared builder caches.
+#   SENTRY_AUTH_TOKEN=... docker build \
 #     --build-arg SPREE_API_URL=... \
 #     --build-arg SPREE_PUBLISHABLE_KEY=... \
 #     --build-arg SENTRY_DSN=... \
 #     --build-arg SENTRY_ORG=... \
 #     --build-arg SENTRY_PROJECT=... \
-#     --build-arg SENTRY_AUTH_TOKEN=... \
+#     --secret id=sentry_auth_token,env=SENTRY_AUTH_TOKEN \
 #     -t storefront .
 
 ARG NODE_VERSION=22-alpine
@@ -52,19 +54,22 @@ ENV SPREE_API_URL=$SPREE_API_URL \
 
 # Optional Sentry release/source-map upload. When SENTRY_DSN is empty,
 # next.config.ts skips withSentryConfig entirely, so the build still works.
+# SENTRY_AUTH_TOKEN is intentionally not declared as ARG/ENV — it's mounted
+# only for the build step via --mount=type=secret below, so it never persists
+# in image layers or build cache.
 ARG SENTRY_DSN=""
 ARG SENTRY_ORG=""
 ARG SENTRY_PROJECT=""
-ARG SENTRY_AUTH_TOKEN=""
 ENV SENTRY_DSN=$SENTRY_DSN \
     SENTRY_ORG=$SENTRY_ORG \
-    SENTRY_PROJECT=$SENTRY_PROJECT \
-    SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
+    SENTRY_PROJECT=$SENTRY_PROJECT
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-RUN npm run build
+RUN --mount=type=secret,id=sentry_auth_token,required=false \
+    SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token 2>/dev/null || true)" \
+    npm run build
 
 
 # ---- runner: minimal runtime image ----
