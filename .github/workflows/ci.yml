@@ -46,3 +46,55 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test
+
+  e2e:
+    name: E2E (Playwright + Spree)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install Playwright system deps only
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: Boot Spree backend (Postgres + Redis + Spree 5.4.3.1)
+        run: docker compose -f e2e-backend/docker-compose.yml up -d --wait
+      - name: Seed Spree and issue API key
+        run: ./scripts/e2e/bootstrap-spree.sh
+      - name: Run Playwright tests
+        run: npm run test:e2e
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+      - name: Dump Spree logs on failure
+        if: failure()
+        run: docker compose -f e2e-backend/docker-compose.yml logs --no-color web > spree.log || true
+      - name: Upload Spree logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spree-logs
+          path: spree.log
+          retention-days: 7
+      - name: Tear down
+        if: always()
+        run: docker compose -f e2e-backend/docker-compose.yml down -v

@@ -1,0 +1,102 @@
+import { expect, type Locator, type Page, test } from "@playwright/test";
+
+/**
+ * Checkout golden-path E2E.
+ *
+ * Walks a guest user through home → PDP → cart → checkout, fills the
+ * shipping address, selects a delivery rate, pays with a Stripe test card,
+ * and confirms the order-placed page renders.
+ *
+ * Backend: e2e-backend/docker-compose.yml (Spree 5.4.3.1 with sample data).
+ * Payments: real Stripe test mode (pk_test_...) — card 4242 4242 4242 4242.
+ *
+ * Run with: npm run e2e:up && npm run test:e2e
+ */
+
+const TEST_CARD = "4242424242424242";
+const TEST_EMAIL = "e2e-buyer@example.com";
+
+test("guest can complete a checkout with a Stripe test card", async ({
+  page,
+}) => {
+  // 1. Land on the home page (default market: us/en).
+  await page.goto("/us/en");
+  await expect(page).toHaveTitle(/.+/);
+
+  // 2. Navigate to the products listing and pick the first available product.
+  await page.goto("/us/en/products");
+  const firstProduct = page.locator('a[href*="/products/"]').first();
+  await expect(firstProduct).toBeVisible({ timeout: 15_000 });
+  await firstProduct.click();
+  await page.waitForURL(/\/products\/[^/]+/);
+
+  // 3. Add to cart from the PDP.
+  const addToCart = page.getByRole("button", { name: /add to cart/i });
+  await expect(addToCart).toBeEnabled({ timeout: 10_000 });
+  await addToCart.click();
+
+  // The cart drawer opens automatically after addItem; navigate to /cart
+  // for a stable entry point that doesn't depend on drawer animation.
+  await page.goto("/us/en/cart");
+  const proceedToCheckout = page.getByRole("link", { name: /checkout/i });
+  await expect(proceedToCheckout).toBeVisible();
+  await proceedToCheckout.click();
+  await page.waitForURL(/\/checkout\//);
+
+  // 4. Fill contact + shipping address.
+  await page.getByLabel(/email address/i).fill(TEST_EMAIL);
+  await fillAddress(page);
+
+  await page.getByRole("button", { name: /continue to delivery/i }).click();
+
+  // 5. Pick the first available shipping rate. Spree sample data ships
+  //    with at least one rate for US destinations.
+  const firstRate = page.getByRole("radio").first();
+  await expect(firstRate).toBeVisible({ timeout: 15_000 });
+  await firstRate.check();
+
+  // 6. Pay with a Stripe test card. The Payment Element renders inside a
+  //    Stripe-controlled iframe, so we drive it via frameLocator.
+  const stripeFrame = page
+    .frameLocator('iframe[name^="__privateStripeFrame"]')
+    .first();
+  await stripeFrame
+    .getByPlaceholder("1234 1234 1234 1234")
+    .fill(TEST_CARD, { timeout: 30_000 });
+  await stripeFrame.getByPlaceholder("MM / YY").fill("12 / 30");
+  await stripeFrame.getByPlaceholder("CVC").fill("123");
+
+  // 7. Submit. Pay Now → order-placed page.
+  await page.getByRole("button", { name: /pay now|place order/i }).click();
+  await page.waitForURL(/\/order-placed\//, { timeout: 60_000 });
+
+  // 8. Confirm the order summary rendered.
+  await expect(page.getByText(/order #/i)).toBeVisible();
+});
+
+async function fillAddress(page: Page) {
+  await safeFill(page.getByLabel(/first name/i), "Test");
+  await safeFill(page.getByLabel(/last name/i), "Buyer");
+  await safeFill(page.getByLabel(/^address$/i).first(), "123 Test St");
+  await safeFill(page.getByLabel(/city/i), "New York");
+  await safeFill(page.getByLabel(/zip|postal code/i), "10001");
+  await safeFill(page.getByLabel(/phone/i), "5555550100");
+
+  // State is a dropdown that populates from the country selection. Pick
+  // the first non-empty option to stay locale-agnostic.
+  const stateSelect = page.getByLabel(/state|province/i);
+  if (
+    await stateSelect
+      .first()
+      .isVisible()
+      .catch(() => false)
+  ) {
+    await stateSelect.first().selectOption({ index: 1 });
+  }
+}
+
+async function safeFill(locator: Locator, value: string) {
+  const target = locator.first();
+  await expect(target).toBeVisible({ timeout: 10_000 });
+  await target.fill(value);
+}
