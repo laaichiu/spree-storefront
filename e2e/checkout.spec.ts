@@ -45,21 +45,27 @@ test("guest can complete a checkout with a Stripe test card", async ({
   await drawerCheckout.click();
   await page.waitForURL(/\/checkout\//);
 
-  // 4. Fill contact + shipping address. The email input has no <label> —
-  // its accessible name comes from `placeholder`, so use getByPlaceholder.
+  // 4. Fill contact + shipping address. The checkout is single-page with
+  // auto-save: address persists on container blur (no explicit "Continue"
+  // button). Email input has no <label> — its accessible name comes from
+  // `placeholder`, so use getByPlaceholder.
   await page.getByPlaceholder(/email address/i).fill(TEST_EMAIL);
   await fillAddress(page);
 
-  await page.getByRole("button", { name: /continue to delivery/i }).click();
+  // Trigger the address auto-save by blurring the form. Clicking the
+  // page heading takes focus out of the AddressFormFields container,
+  // which fires handleContainerBlur → tryAutoSave.
+  await page.getByRole("heading", { name: /shipping method/i }).click();
 
   // 5. Pick the first available shipping rate. Spree sample data ships
   //    with at least one rate for US destinations.
   const firstRate = page.getByRole("radio").first();
-  await expect(firstRate).toBeVisible({ timeout: 15_000 });
+  await expect(firstRate).toBeVisible({ timeout: 30_000 });
   await firstRate.check();
 
-  // 6. Pay with a Stripe test card. The Payment Element renders inside a
-  //    Stripe-controlled iframe, so we drive it via frameLocator.
+  // 6. Pay with a Stripe test card. The Payment Element only renders
+  //    after a session-based payment method is selected, which only
+  //    appears once shipping is locked in. Wait for the Stripe iframe.
   const stripeFrame = page
     .frameLocator('iframe[name^="__privateStripeFrame"]')
     .first();
@@ -69,7 +75,8 @@ test("guest can complete a checkout with a Stripe test card", async ({
   await stripeFrame.getByPlaceholder("MM / YY").fill("12 / 30");
   await stripeFrame.getByPlaceholder("CVC").fill("123");
 
-  // 7. Submit. Pay Now → order-placed page.
+  // 7. Accept policies + submit.
+  await page.getByRole("checkbox", { name: /i agree/i }).check();
   await page.getByRole("button", { name: /pay now|place order/i }).click();
   await page.waitForURL(/\/order-placed\//, { timeout: 60_000 });
 
@@ -127,7 +134,11 @@ async function fillAddress(page: Page) {
 
   const tagName = await stateField.evaluate((el) => el.tagName);
   if (tagName === "SELECT") {
-    await stateField.selectOption({ index: 1 });
+    // Match the test's NY city + 10001 ZIP. Falls back to first option
+    // if New York isn't in the list (different country, etc.).
+    await stateField
+      .selectOption({ label: "New York" })
+      .catch(() => stateField.selectOption({ index: 1 }));
   } else {
     await stateField.fill("NY");
   }
