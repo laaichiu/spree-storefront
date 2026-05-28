@@ -30,17 +30,19 @@ test("guest can complete a checkout with a Stripe test card", async ({
   await firstProduct.click();
   await page.waitForURL(/\/products\/[^/]+/);
 
-  // 3. Add to cart from the PDP.
+  // 3. Add to cart from the PDP. The cart drawer opens automatically after
+  // the server action resolves and the cart cookie is set — wait for the
+  // drawer's Checkout link rather than racing the navigation by going
+  // straight to /cart (which would race the cookie write).
   const addToCart = page.getByRole("button", { name: /add to cart/i });
   await expect(addToCart).toBeEnabled({ timeout: 10_000 });
   await addToCart.click();
 
-  // The cart drawer opens automatically after addItem; navigate to /cart
-  // for a stable entry point that doesn't depend on drawer animation.
-  await page.goto("/us/en/cart");
-  const proceedToCheckout = page.getByRole("link", { name: /checkout/i });
-  await expect(proceedToCheckout).toBeVisible();
-  await proceedToCheckout.click();
+  const drawerCheckout = page
+    .getByRole("dialog")
+    .getByRole("link", { name: /^checkout$/i });
+  await expect(drawerCheckout).toBeVisible({ timeout: 15_000 });
+  await drawerCheckout.click();
   await page.waitForURL(/\/checkout\//);
 
   // 4. Fill contact + shipping address.
