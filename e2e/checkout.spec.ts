@@ -45,8 +45,9 @@ test("guest can complete a checkout with a Stripe test card", async ({
   await drawerCheckout.click();
   await page.waitForURL(/\/checkout\//);
 
-  // 4. Fill contact + shipping address.
-  await page.getByLabel(/email address/i).fill(TEST_EMAIL);
+  // 4. Fill contact + shipping address. The email input has no <label> —
+  // its accessible name comes from `placeholder`, so use getByPlaceholder.
+  await page.getByPlaceholder(/email address/i).fill(TEST_EMAIL);
   await fillAddress(page);
 
   await page.getByRole("button", { name: /continue to delivery/i }).click();
@@ -77,6 +78,11 @@ test("guest can complete a checkout with a Stripe test card", async ({
 });
 
 async function fillAddress(page: Page) {
+  // The Country dropdown defaults alphabetically (Canada before US) — pick
+  // United States explicitly so the rest of the test data (NY state, ZIP
+  // 10001, US phone) is valid for the selected country.
+  await page.getByLabel(/country/i).selectOption({ label: "United States" });
+
   await safeFill(page.getByLabel(/first name/i), "Test");
   await safeFill(page.getByLabel(/last name/i), "Buyer");
   await safeFill(page.getByLabel(/^address$/i).first(), "123 Test St");
