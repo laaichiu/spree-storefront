@@ -82,16 +82,46 @@ async function fillAddress(page: Page) {
   await safeFill(page.getByLabel(/zip|postal code/i), "10001");
   await safeFill(page.getByLabel(/phone/i), "5555550100");
 
-  // State is a dropdown that populates from the country selection. Pick
-  // the first non-empty option to stay locale-agnostic.
-  const stateSelect = page.getByLabel(/state|province/i);
-  if (
-    await stateSelect
-      .first()
-      .isVisible()
-      .catch(() => false)
-  ) {
-    await stateSelect.first().selectOption({ index: 1 });
+  // State/province renders in one of three shapes depending on country +
+  // load state in AddressFormFields:
+  //   1. enabled  <select> — country has states, list is loaded
+  //   2. disabled <select> — country has states, list still loading
+  //   3. text     <input>  — country has no states
+  // Wait for it to leave the "loading" state, then dispatch by tag.
+  const stateField = page.getByLabel(/state|province/i).first();
+  if (!(await stateField.isVisible().catch(() => false))) return;
+
+  // Wait out the loading state so we don't try to select on a disabled <select>.
+  await stateField
+    .evaluate(
+      (el) =>
+        new Promise<void>((resolve) => {
+          const settled = () =>
+            !(el as HTMLSelectElement | HTMLInputElement).disabled;
+          if (settled()) return resolve();
+          const observer = new MutationObserver(() => {
+            if (settled()) {
+              observer.disconnect();
+              resolve();
+            }
+          });
+          observer.observe(el, {
+            attributes: true,
+            attributeFilter: ["disabled"],
+          });
+          setTimeout(() => {
+            observer.disconnect();
+            resolve();
+          }, 5_000);
+        }),
+    )
+    .catch(() => undefined);
+
+  const tagName = await stateField.evaluate((el) => el.tagName);
+  if (tagName === "SELECT") {
+    await stateField.selectOption({ index: 1 });
+  } else {
+    await stateField.fill("NY");
   }
 }
 
