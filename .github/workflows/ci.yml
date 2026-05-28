@@ -81,6 +81,12 @@ jobs:
       - name: Boot Spree backend (Postgres + Redis + Spree 5.4.3.1)
         run: docker compose -f e2e-backend/docker-compose.yml up -d --wait
       - name: Seed Spree and issue API key
+        env:
+          # Stripe secret key for the SpreeStripe::Gateway row. Set as a
+          # repository secret (Settings → Secrets and variables → Actions)
+          # to a Stripe test-mode key paired with the publishable key in
+          # the bootstrap script. PaymentIntents land in that test account.
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
         run: ./scripts/e2e/bootstrap-spree.sh
       - name: Run Playwright tests
         run: npm run test:e2e

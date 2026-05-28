@@ -188,11 +188,17 @@ npm run test:watch  # watch mode
 End-to-end tests run through Playwright against a real Spree backend booted in Docker. The compose file at `e2e-backend/docker-compose.yml` ships Postgres + Redis + the official `ghcr.io/spree/spree:5.4.3.1` image — no `create-spree-app` setup required. Seeding and API-key creation go through the official [`@spree/cli`](https://spreecommerce.org/docs/developer/cli/quickstart) (`spree seed`, `spree sample-data`, `spree api-key create`), installed as a dev dependency.
 
 ```bash
-# 1. Boot Spree + Postgres + Redis, seed sample data, mint a publishable
-#    key, and write .env.e2e at the repo root.
+# 1. Export a Stripe test-mode secret key. The publishable key is
+#    hardcoded to Stripe's public sample (pk_test_TYooMQ…); use the
+#    matching sample from https://docs.stripe.com/keys or your own
+#    Stripe test account's secret key.
+export STRIPE_SECRET_KEY=sk_test_…
+
+# 2. Boot Spree + Postgres + Redis, seed sample data, register a Stripe
+#    payment gateway, mint a publishable key, and write .env.e2e.
 npm run e2e:up
 
-# 2. Run the suite. Playwright boots `next dev` against .env.e2e itself.
+# 3. Run the suite. Playwright boots `next dev` against .env.e2e.
 npm run test:e2e
 
 # Optional: interactive UI mode.
@@ -202,7 +208,7 @@ npm run test:e2e:ui
 npm run e2e:down
 ```
 
-The checkout test pays with Stripe's [public sample test key](https://docs.stripe.com/keys) and card `4242 4242 4242 4242`. PaymentIntents land in Stripe's shared sandbox (no dashboard access). Edit the `STRIPE_KEY` constant in `scripts/e2e/bootstrap-spree.sh` if you want them to land in your own Stripe test account instead.
+The checkout test pays with card `4242 4242 4242 4242` through Stripe's [test mode](https://docs.stripe.com/keys). PaymentIntents land in whichever Stripe test account owns the secret key you exported. In CI, set `STRIPE_SECRET_KEY` as a repository secret (Settings → Secrets and variables → Actions).
 
 ## Project Structure
 
