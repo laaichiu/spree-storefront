@@ -14,6 +14,11 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./e2e",
+  // The guest checkout walks home → PDP → cart → checkout → Stripe against
+  // dev-mode Next.js + dockerized Spree, which blows well past Playwright's
+  // 30s default on CI runners — each retry was dying mid-flow wherever it
+  // happened to be standing.
+  timeout: 120_000,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

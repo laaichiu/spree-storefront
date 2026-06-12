@@ -65,15 +65,21 @@ test("guest can complete a checkout with a Stripe test card", async ({
 
   // 6. Pay with a Stripe test card. The Payment Element only renders
   //    after a session-based payment method is selected, which only
-  //    appears once shipping is locked in. Wait for the Stripe iframe.
-  const stripeFrame = page
-    .frameLocator('iframe[name^="__privateStripeFrame"]')
-    .first();
+  //    appears once shipping is locked in. Several Stripe iframes share
+  //    the __privateStripeFrame name prefix and the Express Checkout
+  //    ("Pay with Link") widget renders before the card form, so target
+  //    the Payment Element by its stable accessible title instead of
+  //    taking the first frame.
+  const stripeFrame = page.frameLocator(
+    'iframe[title="Secure payment input frame"]',
+  );
   await stripeFrame
-    .getByPlaceholder("1234 1234 1234 1234")
+    .getByRole("textbox", { name: "Card number" })
     .fill(TEST_CARD, { timeout: 30_000 });
-  await stripeFrame.getByPlaceholder("MM / YY").fill("12 / 30");
-  await stripeFrame.getByPlaceholder("CVC").fill("123");
+  await stripeFrame
+    .getByRole("textbox", { name: /expiration date/i })
+    .fill("12 / 30");
+  await stripeFrame.getByRole("textbox", { name: "Security code" }).fill("123");
 
   // 7. Accept policies + submit.
   await page.getByRole("checkbox", { name: /i agree/i }).check();
