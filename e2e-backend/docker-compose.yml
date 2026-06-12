@@ -8,34 +8,20 @@
 #
 # Usage (driven by ../scripts/e2e/bootstrap-spree.sh):
 #   docker compose up -d --wait
-#   npx @spree/cli init --no-open
+#   npx @spree/cli seed && npx @spree/cli sample-data
 #   npx @spree/cli api-key create --name E2E --type publishable
 #
 # Spree exposes the storefront API on http://localhost:4000/api/v3/store.
+# Postgres and Redis are reachable only on the compose network — use
+# `docker compose exec postgres psql -U postgres` etc. for debugging.
 
 name: storefront-e2e
-
-x-app: &app
-  image: ghcr.io/spree/spree:5.4.3.1
-  depends_on:
-    postgres:
-      condition: service_healthy
-    redis:
-      condition: service_healthy
-  environment: &app-env
-    DATABASE_URL: postgres://postgres@postgres:5432/spree_e2e
-    REDIS_URL: redis://redis:6379/0
-    SECRET_KEY_BASE: e2e_secret_key_base_not_for_production_use_only_e2e_e2e_e2e_e2e
-    RAILS_FORCE_SSL: "false"
-    RAILS_ASSUME_SSL: "false"
 
 services:
   postgres:
     image: postgres:18-alpine
     environment:
       POSTGRES_HOST_AUTH_METHOD: trust
-    ports:
-      - "5433:5432"
     healthcheck:
       test: pg_isready -U postgres
       interval: 5s
@@ -44,8 +30,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6380:6379"
     healthcheck:
       test: redis-cli ping
       interval: 5s
@@ -53,7 +37,18 @@ services:
       retries: 10
 
   web:
-    <<: *app
+    image: ghcr.io/spree/spree:5.4.3.1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://postgres@postgres:5432/spree_e2e
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY_BASE: e2e_secret_key_base_not_for_production_use_only_e2e_e2e_e2e_e2e
+      RAILS_FORCE_SSL: "false"
+      RAILS_ASSUME_SSL: "false"
     ports:
       - "4000:3000"
     healthcheck:

@@ -61,14 +61,11 @@ fi
 # happen from the backend dir.
 cd "$BACKEND_DIR"
 
+# Both callers (`npm run e2e:up` and CI) already gate on the compose
+# healthcheck via `up -d --wait`; this guard only covers running the
+# script standalone against a still-booting stack.
 echo "==> Waiting for Spree to accept HTTP requests at $SPREE_URL/up"
-for _ in $(seq 1 60); do
-  if curl -fs "$SPREE_URL/up" >/dev/null 2>&1; then
-    break
-  fi
-  sleep 2
-done
-if ! curl -fs "$SPREE_URL/up" >/dev/null 2>&1; then
+if ! curl -fsS --retry 60 --retry-delay 2 --retry-all-errors "$SPREE_URL/up" >/dev/null 2>&1; then
   echo "Spree never came up. Check 'docker compose -f $BACKEND_DIR/docker-compose.yml logs web'." >&2
   exit 1
 fi
@@ -83,8 +80,8 @@ npx @spree/cli sample-data
 # can create one declaratively, but that endpoint only exists from Spree 5.5
 # onward — this E2E targets the stable 5.4.3.1 image, so we fall back to a
 # `bin/rails runner` snippet that creates a SpreeStripe::Gateway row directly.
-# The script is idempotent: re-running on an already-created E2E gateway is
-# a no-op (find_or_create_by on the unique name).
+# The script is idempotent: re-running matches the existing row by name
+# (where(...).first_or_initialize) and reapplies the same attributes.
 # The keys reach Ruby via the container environment (-e pass-through from
 # this script's env) rather than heredoc interpolation, so the Ruby source
 # never embeds them — the heredoc delimiter is quoted on purpose.
@@ -102,6 +99,9 @@ gateway.assign_attributes(
     secret_key: ENV.fetch('STRIPE_SECRET_KEY')
   }
 )
+# validate: false skips SpreeStripe's validate_secret_key hook — a live
+# Stripe API roundtrip at save time. The key still gets exercised for real
+# when checkout creates a PaymentIntent.
 gateway.save!(validate: false)
 puts "OK: gateway #{gateway.id} (#{gateway.name})"
 RUBY

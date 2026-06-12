@@ -16,4 +16,5 @@ set -a
 source .env.e2e
 set +a
 
-exec npx next dev -p 3001 --turbopack
+# Reuse the canonical dev command (port + flags) from package.json.
+exec npm run dev
