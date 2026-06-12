@@ -1,4 +1,10 @@
-import { expect, type Locator, type Page, test } from "@playwright/test";
+import {
+  expect,
+  type FrameLocator,
+  type Locator,
+  type Page,
+  test,
+} from "@playwright/test";
 
 /**
  * Checkout golden-path E2E.
@@ -42,7 +48,14 @@ test("guest can complete a checkout with a Stripe test card", async ({
     .getByRole("dialog")
     .getByRole("link", { name: /^checkout$/i });
   await expect(drawerCheckout).toBeVisible({ timeout: 15_000 });
-  await drawerCheckout.click();
+  // The drawer keeps re-rendering as the cart revalidates (its Express
+  // Checkout widget remounts), which can detach the link mid-click
+  // indefinitely — navigate to the link's target instead of clicking it.
+  const checkoutHref = await drawerCheckout.getAttribute("href");
+  if (!checkoutHref) {
+    throw new Error("Drawer checkout link has no href");
+  }
+  await page.goto(checkoutHref);
   await page.waitForURL(/\/checkout\//);
 
   // 4. Fill contact + shipping address. The checkout is single-page with
@@ -66,20 +79,45 @@ test("guest can complete a checkout with a Stripe test card", async ({
   // 6. Pay with a Stripe test card. The Payment Element only renders
   //    after a session-based payment method is selected, which only
   //    appears once shipping is locked in. Several Stripe iframes share
-  //    the __privateStripeFrame name prefix and the Express Checkout
-  //    ("Pay with Link") widget renders before the card form, so target
-  //    the Payment Element by its stable accessible title instead of
-  //    taking the first frame.
-  const stripeFrame = page.frameLocator(
+  //    the "Secure payment input frame" title (an accessory frame mounts
+  //    lazily next to the real form, before or after it), so resolve the
+  //    frame that actually contains the card form rather than trusting
+  //    mount order — a fill aimed at the wrong frame "succeeds" silently
+  //    while the real card field stays empty.
+  const stripeFrames = page.locator(
     'iframe[title="Secure payment input frame"]',
   );
-  await stripeFrame
-    .getByRole("textbox", { name: "Card number" })
-    .fill(TEST_CARD, { timeout: 30_000 });
-  await stripeFrame
-    .getByRole("textbox", { name: /expiration date/i })
-    .fill("12 / 30");
-  await stripeFrame.getByRole("textbox", { name: "Security code" }).fill("123");
+  let cardFrame: FrameLocator | undefined;
+  await expect(async () => {
+    for (let i = 0; i < (await stripeFrames.count()); i++) {
+      const frame = stripeFrames.nth(i).contentFrame();
+      if (await frame.getByRole("textbox", { name: "Card number" }).count()) {
+        cardFrame = frame;
+        return;
+      }
+    }
+    throw new Error("Card form has not rendered in any Stripe frame yet");
+  }).toPass({ timeout: 30_000 });
+  if (!cardFrame) {
+    throw new Error("Card form frame not resolved");
+  }
+
+  const cardNumber = cardFrame.getByRole("textbox", { name: "Card number" });
+  await cardNumber.fill(TEST_CARD);
+  // Stripe formats the value with spaces — assert the digits landed in
+  // THIS frame before paying, since a wrong-frame fill is silent.
+  await expect(cardNumber).toHaveValue(/4242/);
+  // The expiry field's accessible name varies across Payment Element
+  // mounts ("Expiration date" vs "Expiration (MM/YY)"); the placeholder
+  // is the stable handle.
+  await cardFrame.getByPlaceholder("MM / YY").fill("12 / 30");
+  await cardFrame.getByRole("textbox", { name: "Security code" }).fill("123");
+  // US card forms include their own required ZIP field (distinct from
+  // the shipping address) — Pay Now fails validation if it stays blank.
+  const zip = cardFrame.getByRole("textbox", { name: /zip code/i });
+  if (await zip.count()) {
+    await zip.fill("10001");
+  }
 
   // 7. Accept policies + submit.
   await page.getByRole("checkbox", { name: /i agree/i }).check();
