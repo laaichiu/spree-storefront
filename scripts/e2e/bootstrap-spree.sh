@@ -21,32 +21,37 @@ readonly BACKEND_DIR="$REPO_ROOT/e2e-backend"
 readonly ENV_FILE="$REPO_ROOT/.env.e2e"
 readonly SPREE_URL="http://localhost:4000"
 
-# Stripe's public sample publishable key — same one used throughout
-# https://docs.stripe.com/keys. Test-mode only; PaymentIntents land in a
-# shared Stripe sandbox. Safe to commit.
-readonly STRIPE_PUBLISHABLE_KEY="pk_test_TYooMQauvdEDq54NiTphI7jx"
-
-# Stripe secret key. Must be a test-mode key (sk_test_…) paired with the
-# publishable key above (or your own pair). Required by Spree to create
-# PaymentIntents server-side during checkout.
+# Stripe test-mode API keys. Both must come from the SAME Stripe sandbox
+# account — a mismatched pair makes Stripe.js fail to confirm the
+# PaymentIntent during checkout. Stripe no longer publishes a working
+# sample pair (the old docs sk_test_… key is expired), so use keys from
+# your own Stripe sandbox:
 #
-# Not committed: GitHub's push protection flags any sk_test_ literal as a
-# secret regardless of provenance. Export it before running this script:
-#
+#   export STRIPE_PUBLISHABLE_KEY=pk_test_…
 #   export STRIPE_SECRET_KEY=sk_test_…
 #   npm run e2e:up
 #
-# In CI, set it as a repository secret and inject via the workflow env.
-# Stripe's documented public sample (see https://docs.stripe.com/keys)
-# pairs with the pk_test_TYooMQauvdEDq54NiTphI7jx publishable key above.
-if [[ -z "${STRIPE_SECRET_KEY:-}" ]]; then
-  echo "STRIPE_SECRET_KEY is not set." >&2
-  echo "Set it to a Stripe test-mode key (sk_test_…) and re-run." >&2
+# The secret key is never committed: GitHub's push protection flags any
+# sk_test_ literal as a secret regardless of provenance. In CI,
+# STRIPE_SECRET_KEY is a repository secret and STRIPE_PUBLISHABLE_KEY a
+# repository variable, both injected via the workflow env (see
+# .github/workflows/ci.yml).
+if [[ -z "${STRIPE_PUBLISHABLE_KEY:-}" || -z "${STRIPE_SECRET_KEY:-}" ]]; then
+  echo "STRIPE_PUBLISHABLE_KEY and STRIPE_SECRET_KEY must both be set." >&2
+  echo "Use a pk_test_…/sk_test_… pair from your own Stripe sandbox." >&2
   echo "See script header for details." >&2
   exit 1
 fi
 
-if [[ "$STRIPE_SECRET_KEY" != sk_test_* ]]; then
+# Full-shape checks (not just prefix): a stray quote, space, or other
+# copy-paste artifact would otherwise flow into .env.e2e and break parsing.
+if [[ ! "$STRIPE_PUBLISHABLE_KEY" =~ ^pk_test_[A-Za-z0-9_]+$ ]]; then
+  echo "STRIPE_PUBLISHABLE_KEY must be a test-mode key (pk_test_…)." >&2
+  echo "Got: ${STRIPE_PUBLISHABLE_KEY:0:8}…" >&2
+  exit 1
+fi
+
+if [[ ! "$STRIPE_SECRET_KEY" =~ ^sk_test_[A-Za-z0-9_]+$ ]]; then
   echo "STRIPE_SECRET_KEY must be a test-mode key (sk_test_…)." >&2
   echo "Got: ${STRIPE_SECRET_KEY:0:8}…" >&2
   exit 1
@@ -80,8 +85,11 @@ npx @spree/cli sample-data
 # `bin/rails runner` snippet that creates a SpreeStripe::Gateway row directly.
 # The script is idempotent: re-running on an already-created E2E gateway is
 # a no-op (find_or_create_by on the unique name).
+# The keys reach Ruby via the container environment (-e pass-through from
+# this script's env) rather than heredoc interpolation, so the Ruby source
+# never embeds them — the heredoc delimiter is quoted on purpose.
 echo "==> Configuring Stripe payment gateway on the default store"
-docker compose exec -T web bin/rails runner - <<RUBY
+docker compose exec -T -e STRIPE_PUBLISHABLE_KEY -e STRIPE_SECRET_KEY web bin/rails runner - <<'RUBY'
 store = Spree::Store.default
 gateway = Spree::PaymentMethod.where(type: 'SpreeStripe::Gateway', name: 'E2E Stripe').first_or_initialize
 gateway.assign_attributes(
@@ -90,8 +98,8 @@ gateway.assign_attributes(
   auto_capture: true,
   stores: [store],
   preferences: {
-    publishable_key: '$STRIPE_PUBLISHABLE_KEY',
-    secret_key: '$STRIPE_SECRET_KEY'
+    publishable_key: ENV.fetch('STRIPE_PUBLISHABLE_KEY'),
+    secret_key: ENV.fetch('STRIPE_SECRET_KEY')
   }
 )
 gateway.save!(validate: false)
