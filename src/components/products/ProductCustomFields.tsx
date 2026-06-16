@@ -25,7 +25,11 @@ function renderValue(
         : JSON.stringify(field.value);
     case "rich_text":
       // Value is admin-authored HTML from the Spree CMS backend (trusted source)
-      return <span dangerouslySetInnerHTML={{ __html: field.value }} />;
+      return <span dangerouslySetInnerHTML={{ __html: field.value ?? "" }} />;
+    case "short_text":
+    case "long_text":
+    case "number":
+      return String(field.value);
     default:
       return String(field.value);
   }
