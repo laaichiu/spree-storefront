@@ -5,10 +5,6 @@ interface ProductCustomFieldsProps {
   customFields?: Array<CustomField>;
 }
 
-function normalizeType(type: string): string {
-  return type.split("::").pop() || type;
-}
-
 function renderBooleanValue(
   value: unknown,
   t: ReturnType<typeof useTranslations<"products">>,
@@ -18,17 +14,16 @@ function renderBooleanValue(
 
 function renderValue(
   field: CustomField,
-  normalizedType: string,
   t: ReturnType<typeof useTranslations<"products">>,
 ): React.ReactNode {
-  switch (normalizedType) {
-    case "Boolean":
+  switch (field.field_type) {
+    case "boolean":
       return renderBooleanValue(field.value, t);
-    case "Json":
+    case "json":
       return typeof field.value === "string"
         ? field.value
         : JSON.stringify(field.value);
-    case "RichText":
+    case "rich_text":
       // Value is admin-authored HTML from the Spree CMS backend (trusted source)
       return <span dangerouslySetInnerHTML={{ __html: field.value }} />;
     default:
@@ -51,19 +46,16 @@ export function ProductCustomFields({
         {t("properties")}
       </h2>
       <dl className="space-y-3">
-        {customFields.map((field) => {
-          const type = normalizeType(field.type);
-          return (
-            <div key={field.id} className="flex">
-              <dt className="w-32 shrink-0 text-gray-500 text-sm">
-                {field.label}
-              </dt>
-              <dd className="text-gray-900 text-sm min-w-0">
-                {renderValue(field, type, t)}
-              </dd>
-            </div>
-          );
-        })}
+        {customFields.map((field) => (
+          <div key={field.id} className="flex">
+            <dt className="w-32 shrink-0 text-gray-500 text-sm">
+              {field.label}
+            </dt>
+            <dd className="text-gray-900 text-sm min-w-0">
+              {renderValue(field, t)}
+            </dd>
+          </div>
+        ))}
       </dl>
     </div>
   );
