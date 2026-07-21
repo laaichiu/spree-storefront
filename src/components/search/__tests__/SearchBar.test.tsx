@@ -1,5 +1,7 @@
 import type { Product } from "@spree/sdk";
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SearchBar } from "@/components/search/SearchBar";
 
@@ -13,6 +15,19 @@ const { mockGetProducts, mockPush, mockTrackQuickSearch, mockTrackSelectItem } =
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
+}));
+
+vi.mock("next/link", () => ({
+  default: ({ onClick, ...props }: ComponentProps<"a">) => (
+    <a
+      {...props}
+      // biome-ignore lint/a11y/useValidAnchor: Keep link semantics without triggering jsdom navigation.
+      onClick={(event) => {
+        event.preventDefault();
+        onClick?.(event);
+      }}
+    />
+  ),
 }));
 
 vi.mock("next-intl", () => ({
@@ -122,6 +137,73 @@ describe("SearchBar", () => {
     expect(mockPush).toHaveBeenCalledWith("/us/en/products?q=air");
     expect(input).toHaveValue("");
     expect(screen.queryByRole("option")).not.toBeInTheDocument();
+  });
+
+  it("uses arrow keys to navigate suggestions and Enter to open one", async () => {
+    mockGetProducts.mockResolvedValue(response([airFryer, airPurifier]));
+    render(<SearchBar basePath="/us/en" />);
+    const input = screen.getByRole("combobox", { name: "search" });
+
+    fireEvent.change(input, { target: { value: "air" } });
+    await advanceSearchDebounce();
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+
+    expect(input).toHaveAttribute("aria-activedescendant", "search-option-0");
+    expect(
+      screen.getByRole("listbox", { name: "searchSuggestions" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: /Digital Air Fryer/ }),
+    ).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    expect(input).toHaveAttribute("aria-activedescendant", "search-option-1");
+
+    fireEvent.keyDown(input, { key: "ArrowUp" });
+    expect(input).toHaveAttribute("aria-activedescendant", "search-option-0");
+
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(mockPush).toHaveBeenCalledWith("/us/en/products/digital-air-fryer");
+  });
+
+  it("keeps results open when Tab moves focus to view all", async () => {
+    vi.useRealTimers();
+    const user = userEvent.setup();
+    render(<SearchBar basePath="/us/en" />);
+    const input = screen.getByRole("combobox", { name: "search" });
+
+    fireEvent.change(input, { target: { value: "air" } });
+    await screen.findByText("Digital Air Fryer");
+    await user.click(input);
+
+    await user.tab();
+    const viewAll = screen.getByRole("link", {
+      name: "viewAllResultsFor:air",
+    });
+    expect(viewAll).toHaveAttribute("href", "/us/en/products?q=air");
+    expect(viewAll).toHaveFocus();
+
+    await act(() => new Promise((resolve) => window.setTimeout(resolve, 250)));
+    expect(screen.getByText("Digital Air Fryer")).toBeInTheDocument();
+    expect(viewAll).toHaveFocus();
+
+    await user.keyboard("{Enter}");
+    expect(input).toHaveValue("");
+    expect(viewAll).not.toBeInTheDocument();
+  });
+
+  it("closes the suggestion list with Escape", async () => {
+    render(<SearchBar basePath="/us/en" />);
+    const input = screen.getByRole("combobox", { name: "search" });
+
+    fireEvent.change(input, { target: { value: "air" } });
+    await advanceSearchDebounce();
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    fireEvent.keyDown(input, { key: "Escape" });
+
+    expect(input).toHaveAttribute("aria-expanded", "false");
+    expect(input).not.toHaveAttribute("aria-activedescendant");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 
   it("discards a stale response when a newer query resolves first", async () => {

@@ -126,6 +126,7 @@
     "sku": "UGS",
     "options": "Options",
     "search": "Rechercher...",
+    "searchSuggestions": "Suggestions de recherche",
     "searching": "Recherche...",
     "viewAllResultsFor": "Voir tous les resultats pour \"{query}\"",
     "manual": "Manuel",

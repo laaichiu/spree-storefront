@@ -2,6 +2,7 @@
 
 import type { Product } from "@spree/sdk";
 import { Search } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -32,7 +33,6 @@ export function SearchBar({ basePath, autoFocus, onNavigate }: SearchBarProps) {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
 
   // The search stays mounted so its query and results survive closing.
@@ -48,9 +48,6 @@ export function SearchBar({ basePath, autoFocus, onNavigate }: SearchBarProps) {
       requestIdRef.current += 1;
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
-      }
-      if (blurTimeoutRef.current) {
-        clearTimeout(blurTimeoutRef.current);
       }
     };
   }, []);
@@ -120,10 +117,6 @@ export function SearchBar({ basePath, autoFocus, onNavigate }: SearchBarProps) {
       clearTimeout(debounceRef.current);
       debounceRef.current = null;
     }
-    if (blurTimeoutRef.current) {
-      clearTimeout(blurTimeoutRef.current);
-      blurTimeoutRef.current = null;
-    }
     setQuery("");
     setSuggestions([]);
     setIsOpen(false);
@@ -155,32 +148,32 @@ export function SearchBar({ basePath, autoFocus, onNavigate }: SearchBarProps) {
     onNavigate?.();
   };
 
-  // Close suggestions on blur — delayed to allow click on suggestions
-  const handleBlur = () => {
-    blurTimeoutRef.current = setTimeout(() => {
-      blurTimeoutRef.current = null;
-      setIsOpen(false);
-    }, 200);
+  const handleBlur = (e: React.FocusEvent<HTMLDivElement>): void => {
+    if (e.relatedTarget && e.currentTarget.contains(e.relatedTarget)) return;
+
+    setIsOpen(false);
+    setSelectedIndex(-1);
   };
 
-  const handleFocus = () => {
-    if (blurTimeoutRef.current) {
-      clearTimeout(blurTimeoutRef.current);
-      blurTimeoutRef.current = null;
-    }
+  const handleFocus = (): void => {
     setIsOpen(true);
   };
 
-  // Cancel blur timeout when interacting with suggestions
-  const handleSuggestionsMouseDown = () => {
-    if (blurTimeoutRef.current) {
-      clearTimeout(blurTimeoutRef.current);
-      blurTimeoutRef.current = null;
-    }
-  };
+  const showSuggestions =
+    isOpen && (suggestions.length > 0 || loading || query.length >= 2);
+  const isListboxOpen = isOpen && !loading && suggestions.length > 0;
+  const searchQuery = query.trim();
 
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape" && showSuggestions) {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsOpen(false);
+      setSelectedIndex(-1);
+      return;
+    }
+
     if (!isOpen || suggestions.length === 0) return;
 
     switch (e.key) {
@@ -203,19 +196,13 @@ export function SearchBar({ basePath, autoFocus, onNavigate }: SearchBarProps) {
           submitSearch();
         }
         break;
-      case "Escape":
-        setIsOpen(false);
-        break;
     }
   };
 
-  const showSuggestions =
-    isOpen && (suggestions.length > 0 || loading || query.length >= 2);
-
   return (
-    <div className="relative">
+    <div className="relative" onBlur={handleBlur}>
       <form onSubmit={handleSubmit}>
-        <InputGroup className="h-12 rounded-none border-0 has-[[data-slot=input-group-control]:focus]:border-0 has-[[data-slot=input-group-control]:focus]:[outline:none]">
+        <InputGroup className="h-11 rounded-sm border border-gray-300 bg-white has-[[data-slot=input-group-control]:focus]:border-gray-900 has-[[data-slot=input-group-control]:focus]:[outline:none]">
           <InputGroupInput
             ref={inputRef}
             type="text"
@@ -224,20 +211,21 @@ export function SearchBar({ basePath, autoFocus, onNavigate }: SearchBarProps) {
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}
             onFocus={handleFocus}
-            onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             placeholder={t("search")}
             role="combobox"
-            aria-expanded={showSuggestions}
-            aria-controls={showSuggestions ? "search-suggestions" : undefined}
+            aria-expanded={isListboxOpen}
+            aria-controls={isListboxOpen ? "search-suggestions" : undefined}
             aria-activedescendant={
-              selectedIndex >= 0 ? `search-option-${selectedIndex}` : undefined
+              isListboxOpen && selectedIndex >= 0
+                ? `search-option-${selectedIndex}`
+                : undefined
             }
             aria-autocomplete="list"
             aria-label={t("search")}
-            className="px-2 text-sm tracking-[0.18em] uppercase placeholder:text-gray-500 placeholder:opacity-100"
+            className="px-0 text-sm placeholder:text-gray-500 placeholder:opacity-100"
           />
-          <InputGroupAddon className="pl-0 text-gray-700">
+          <InputGroupAddon className="pr-3 text-gray-500">
             <Search className="size-[18px] stroke-[1.5]" />
           </InputGroupAddon>
         </InputGroup>
@@ -245,27 +233,29 @@ export function SearchBar({ basePath, autoFocus, onNavigate }: SearchBarProps) {
 
       {/* Suggestions dropdown */}
       {showSuggestions && (
-        <div
-          className="fixed left-0 right-0 mt-1 bg-white border-b border-gray-200 z-50"
-          onMouseDown={handleSuggestionsMouseDown}
-        >
+        <div className="fixed left-0 right-0 mt-1 bg-white border-b border-gray-200 z-50">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             {loading ? (
-              <div className="p-4 text-center text-gray-500 text-sm">
+              <div
+                role="status"
+                className="p-4 text-center text-gray-500 text-sm"
+              >
                 {t("searching")}
               </div>
             ) : suggestions.length > 0 ? (
-              <ul id="search-suggestions" role="listbox">
-                {suggestions.map((product, index) => (
-                  <li
-                    key={product.id}
-                    id={`search-option-${index}`}
-                    role="option"
-                    aria-selected={index === selectedIndex}
-                    tabIndex={-1}
-                  >
+              <>
+                <div
+                  id="search-suggestions"
+                  role="listbox"
+                  aria-label={t("searchSuggestions")}
+                >
+                  {suggestions.map((product, index) => (
                     <button
+                      key={product.id}
+                      id={`search-option-${index}`}
                       type="button"
+                      role="option"
+                      aria-selected={index === selectedIndex}
                       onClick={() => handleSuggestionClick(product, index)}
                       tabIndex={-1}
                       className={`w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 transition-colors ${
@@ -294,29 +284,28 @@ export function SearchBar({ basePath, autoFocus, onNavigate }: SearchBarProps) {
                         )}
                       </div>
                     </button>
-                  </li>
-                ))}
-                {/* View all results link */}
-                {query.trim() && (
-                  <li className="border-t border-gray-100">
-                    <button
-                      type="button"
+                  ))}
+                </div>
+                {searchQuery && (
+                  <div className="border-t border-gray-100">
+                    <Link
+                      href={`${basePath}/products?q=${encodeURIComponent(searchQuery)}`}
                       onClick={() => {
-                        router.push(
-                          `${basePath}/products?q=${encodeURIComponent(query.trim())}`,
-                        );
                         resetSearch();
                         onNavigate?.();
                       }}
-                      className="w-full p-3 text-sm text-primary hover:bg-gray-50 text-center font-medium"
+                      className="block w-full p-3 text-sm text-primary hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary text-center font-medium"
                     >
-                      {t("viewAllResultsFor", { query: query.trim() })}
-                    </button>
-                  </li>
+                      {t("viewAllResultsFor", { query: searchQuery })}
+                    </Link>
+                  </div>
                 )}
-              </ul>
+              </>
             ) : query.length >= 2 ? (
-              <div className="p-4 text-center text-gray-500 text-sm">
+              <div
+                role="status"
+                className="p-4 text-center text-gray-500 text-sm"
+              >
                 {t("noProductsFound")}
               </div>
             ) : null}

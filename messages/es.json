@@ -126,6 +126,7 @@
     "sku": "SKU",
     "options": "Opciones",
     "search": "Buscar...",
+    "searchSuggestions": "Sugerencias de búsqueda",
     "searching": "Buscando...",
     "viewAllResultsFor": "Ver todos los resultados para \"{query}\"",
     "manual": "Manual",
