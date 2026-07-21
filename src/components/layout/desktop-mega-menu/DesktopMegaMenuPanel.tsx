@@ -3,12 +3,13 @@
 import type { Category } from "@spree/sdk";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import type { RefObject } from "react";
+import type { ReactPortal, RefObject } from "react";
 import { createPortal } from "react-dom";
 import {
   categoryPathEquals,
   categoryPathMatches,
 } from "@/components/layout/desktop-mega-menu/model";
+import { CategoryImage } from "@/components/ui/category-image";
 import { cn } from "@/lib/utils";
 
 interface DesktopMegaMenuPanelProps {
@@ -18,14 +19,15 @@ interface DesktopMegaMenuPanelProps {
   pathname: string;
   onCancelScheduledClose: () => void;
   onClose: () => void;
+  onNavigate: () => void;
   onScheduleClose: () => void;
-  panelRef: RefObject<HTMLDivElement | null>;
+  panelRef: RefObject<HTMLElement | null>;
 }
 
 const panelLinkClass =
   "relative block w-fit max-w-full text-sm text-gray-700 transition-colors after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-center after:scale-x-0 after:bg-current after:transition-transform after:duration-200 hover:text-gray-950 hover:after:scale-x-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2";
 
-function getCategoryHref(basePath: string, category: Category) {
+function getCategoryHref(basePath: string, category: Category): string {
   return `${basePath}/c/${category.permalink}`;
 }
 
@@ -36,9 +38,10 @@ export function DesktopMegaMenuPanel({
   pathname,
   onCancelScheduledClose,
   onClose,
+  onNavigate,
   onScheduleClose,
   panelRef,
-}: DesktopMegaMenuPanelProps) {
+}: DesktopMegaMenuPanelProps): ReactPortal | null {
   const t = useTranslations("header");
 
   if (typeof document === "undefined") {
@@ -68,9 +71,7 @@ export function DesktopMegaMenuPanel({
         ref={panelRef}
         id={activePanelId}
         aria-label={activeCategory.name}
-        className="fixed inset-x-0 top-16 z-50 border-b border-gray-200 bg-white shadow-lg max-lg:hidden"
-        onMouseEnter={onCancelScheduledClose}
-        onMouseLeave={onScheduleClose}
+        className="fixed inset-x-0 top-16 z-50 max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-b border-gray-200 bg-white shadow-lg max-lg:hidden"
         onPointerEnter={onCancelScheduledClose}
         onPointerLeave={onScheduleClose}
       >
@@ -97,7 +98,7 @@ export function DesktopMegaMenuPanel({
               >
                 <Link
                   href={getCategoryHref(basePath, activeCategory)}
-                  onClick={onClose}
+                  onClick={onNavigate}
                   aria-current={isActiveCategory ? "page" : undefined}
                   className={cn(
                     panelLinkClass,
@@ -116,13 +117,20 @@ export function DesktopMegaMenuPanel({
                       category: child,
                       pathname,
                     });
+                    const isExactCurrentCategory = categoryPathEquals({
+                      basePath,
+                      category: child,
+                      pathname,
+                    });
 
                     return (
                       <Link
                         key={child.id}
                         href={getCategoryHref(basePath, child)}
-                        onClick={onClose}
-                        aria-current={isCurrentCategory ? "page" : undefined}
+                        onClick={onNavigate}
+                        aria-current={
+                          isExactCurrentCategory ? "page" : undefined
+                        }
                         className={cn(
                           panelLinkClass,
                           isCurrentCategory &&
@@ -139,13 +147,20 @@ export function DesktopMegaMenuPanel({
                     category: child,
                     pathname,
                   });
+                  const isExactCurrentCategory = categoryPathEquals({
+                    basePath,
+                    category: child,
+                    pathname,
+                  });
 
                   return (
                     <div key={child.id} className="space-y-2">
                       <Link
                         href={getCategoryHref(basePath, child)}
-                        onClick={onClose}
-                        aria-current={isCurrentCategory ? "page" : undefined}
+                        onClick={onNavigate}
+                        aria-current={
+                          isExactCurrentCategory ? "page" : undefined
+                        }
                         className={cn(
                           panelLinkClass,
                           "font-semibold text-gray-950",
@@ -161,14 +176,19 @@ export function DesktopMegaMenuPanel({
                             category: grandchild,
                             pathname,
                           });
+                          const isExactCurrentGrandchild = categoryPathEquals({
+                            basePath,
+                            category: grandchild,
+                            pathname,
+                          });
 
                           return (
                             <Link
                               key={grandchild.id}
                               href={getCategoryHref(basePath, grandchild)}
-                              onClick={onClose}
+                              onClick={onNavigate}
                               aria-current={
-                                isCurrentGrandchild ? "page" : undefined
+                                isExactCurrentGrandchild ? "page" : undefined
                               }
                               className={cn(
                                 panelLinkClass,
@@ -191,15 +211,18 @@ export function DesktopMegaMenuPanel({
             {activeCategory.image_url ? (
               <Link
                 href={getCategoryHref(basePath, activeCategory)}
-                onClick={onClose}
+                onClick={onNavigate}
                 className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
               >
-                <div
-                  className="aspect-[4/3] w-full overflow-hidden bg-gray-100 bg-cover bg-center transition-transform duration-500 group-hover:scale-[1.02]"
-                  style={{
-                    backgroundImage: `url(${activeCategory.image_url})`,
-                  }}
-                />
+                <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
+                  <CategoryImage
+                    src={activeCategory.image_url}
+                    alt=""
+                    fill
+                    sizes="(min-width: 1024px) 17rem, 100vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-[1.02] motion-reduce:transform-none motion-reduce:transition-none"
+                  />
+                </div>
                 <p className="pt-3 text-sm text-gray-700">
                   {t("allCategory", { category: activeCategory.name })}
                 </p>

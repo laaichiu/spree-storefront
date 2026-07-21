@@ -8,7 +8,7 @@ export function categoryPathMatches({
   basePath: string;
   category: Category;
   pathname: string;
-}) {
+}): boolean {
   const categoryPath = `${basePath}/c/${category.permalink}`;
 
   return pathname === categoryPath || pathname.startsWith(`${categoryPath}/`);
@@ -22,6 +22,6 @@ export function categoryPathEquals({
   basePath: string;
   category: Category;
   pathname: string;
-}) {
+}): boolean {
   return pathname === `${basePath}/c/${category.permalink}`;
 }
