@@ -1,35 +1,21 @@
 "use client";
 
 import type { Category } from "@spree/sdk";
-import { ArrowLeft, Check, ChevronRight, User, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, X } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { RegionPreferences } from "@/components/layout/RegionPreferences";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetFooter,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { useStore } from "@/contexts/StoreContext";
-import { useCountrySwitch } from "@/hooks/useCountrySwitch";
 
-// Convert ISO country code to flag emoji
-function countryToFlag(countryCode: string): string {
-  const code = countryCode.toUpperCase();
-  if (code.length !== 2) return "";
-  const firstChar = code.charCodeAt(0) - 65 + 0x1f1e6;
-  const secondChar = code.charCodeAt(1) - 65 + 0x1f1e6;
-  return String.fromCodePoint(firstChar, secondChar);
-}
-
-type PanelType =
-  | { kind: "main" }
-  | { kind: "category"; category: Category }
-  | { kind: "country" };
+type PanelType = { kind: "main" } | { kind: "category"; category: Category };
 
 interface MobileMenuProps {
   rootCategories: Category[];
@@ -45,12 +31,6 @@ export function MobileMenu({ rootCategories, basePath }: MobileMenuProps) {
   const [animatedIndex, setAnimatedIndex] = useState(0);
   const rafRef = useRef<number | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const { country, currency, countries } = useStore();
-  const { isCountryNavigating, handleCountrySelect } = useCountrySwitch({
-    currentCountry: country,
-    onBeforeNavigate: () => setOpen(false),
-  });
 
   const currentPanel = panelStack[panelStack.length - 1];
 
@@ -191,9 +171,7 @@ export function MobileMenu({ rootCategories, basePath }: MobileMenuProps) {
             <span>
               {currentPanel.kind === "category"
                 ? currentPanel.category.name
-                : currentPanel.kind === "country"
-                  ? t("selectCountry")
-                  : ""}
+                : ""}
             </span>
           </button>
           <Button
@@ -260,33 +238,18 @@ export function MobileMenu({ rootCategories, basePath }: MobileMenuProps) {
               >
                 {t("contact")}
               </Link>
+              <Link
+                href={`${basePath}/account`}
+                onClick={() => setOpen(false)}
+                className="mt-6 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-gray-50"
+              >
+                {t("myAccount")}
+              </Link>
             </nav>
 
-            {/* Footer: Country switcher (mobile + tablet) + Account (mobile only) */}
-            <SheetFooter className="lg:hidden border-t border-gray-200 pt-4 gap-2">
-              <button
-                type="button"
-                onClick={() => pushPanel({ kind: "country" })}
-                className="flex items-center gap-2 px-4 py-2.5 text-base text-gray-700 hover:bg-gray-50 rounded-lg transition-colors w-full"
-              >
-                <span className="text-lg leading-none">
-                  {countryToFlag(country)}
-                </span>
-                <span className="font-medium">{country.toUpperCase()}</span>
-                <span className="text-gray-400">|</span>
-                <span>{currency}</span>
-                <ChevronRight className="w-4 h-4 text-gray-400 ml-auto" />
-              </button>
-
-              <SheetClose asChild className="md:hidden">
-                <Link
-                  href={`${basePath}/account`}
-                  className="flex items-center justify-center gap-2 mx-4 mb-2 px-4 py-3 bg-black text-white rounded-lg text-base font-medium hover:bg-gray-800 transition-colors"
-                >
-                  <User className="size-5" />
-                  <span>{t("myAccount")}</span>
-                </Link>
-              </SheetClose>
+            {/* Region preferences - mobile only */}
+            <SheetFooter className="items-center border-t border-gray-200 py-5 md:hidden">
+              <RegionPreferences variant="menu" />
             </SheetFooter>
           </div>
 
@@ -357,56 +320,6 @@ export function MobileMenu({ rootCategories, basePath }: MobileMenuProps) {
               </div>
             );
           })}
-
-          {/* Country selector panel */}
-          <div
-            className={`absolute inset-0 flex flex-col bg-white transition-transform duration-300 ease-in-out ${
-              currentPanel.kind === "country" &&
-              animatedIndex === panelStack.length - 1
-                ? "translate-x-0"
-                : "translate-x-full"
-            }`}
-          >
-            <div className="md:hidden px-4 py-2 border-b border-gray-200">
-              <button
-                type="button"
-                onClick={popPanel}
-                className="flex items-center gap-2 text-gray-700 hover:text-gray-900 py-2 text-base font-medium"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                <span>{t("selectCountry")}</span>
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-4 py-2">
-              {countries.map((c) => {
-                const isSelected =
-                  c.iso.toLowerCase() === country.toLowerCase();
-                return (
-                  <button
-                    key={c.iso}
-                    type="button"
-                    disabled={isCountryNavigating}
-                    onClick={() => handleCountrySelect(c)}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-base transition-colors ${
-                      isSelected
-                        ? "bg-gray-100 font-medium"
-                        : "hover:bg-gray-50"
-                    }`}
-                  >
-                    <span className="text-lg leading-none">
-                      {countryToFlag(c.iso)}
-                    </span>
-                    <span className="flex-1 text-left font-medium">
-                      {c.name}
-                    </span>
-                    <span className="text-sm text-gray-500">{c.currency}</span>
-                    {isSelected && <Check className="w-4 h-4 text-black" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         </div>
       </SheetContent>
     </Sheet>
