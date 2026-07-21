@@ -34,6 +34,7 @@
     "home": "Home",
     "allProducts": "All Products",
     "contact": "Contact",
+    "allCategory": "All {category}",
     "viewAllCategory": "View all {category}",
     "openSearch": "Open search",
     "closeSearch": "Close search",

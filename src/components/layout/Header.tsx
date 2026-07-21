@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { CartButton } from "@/components/layout/CartButton";
+import { DesktopMegaMenu } from "@/components/layout/DesktopMegaMenu";
 import { SearchToggle } from "@/components/layout/SearchToggle";
 import { Button } from "@/components/ui/button";
 import { getStoreName } from "@/lib/store";
@@ -54,7 +55,20 @@ export async function Header({
     <SearchToggle
       basePath={basePath}
       left={
-        <LazyMobileMenu rootCategories={rootCategories} basePath={basePath} />
+        <>
+          <div className="hidden min-w-0 lg:block">
+            <DesktopMegaMenu
+              rootCategories={rootCategories}
+              basePath={basePath}
+            />
+          </div>
+          <div className="lg:hidden">
+            <LazyMobileMenu
+              rootCategories={rootCategories}
+              basePath={basePath}
+            />
+          </div>
+        </>
       }
       center={
         <Link href={basePath || "/"} className="flex items-center min-w-0">
