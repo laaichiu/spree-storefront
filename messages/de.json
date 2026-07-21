@@ -54,6 +54,13 @@
     "cart": "Warenkorb",
     "policies": "Richtlinien",
     "poweredBy": "Betrieben von",
+    "regionPreferences": "Regionale Einstellungen",
+    "regionPreferencesDescription": "Wählen Sie die Region und Sprache, in der Sie einkaufen möchten. Die Währung wird durch die ausgewählte Region festgelegt.",
+    "region": "Region",
+    "language": "Sprache",
+    "updatePreferences": "Einstellungen aktualisieren",
+    "updatingPreferences": "Einstellungen werden aktualisiert...",
+    "updatePreferencesFailed": "Die regionalen Einstellungen konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
     "copyright": "© {year} {storeName}. Unterstützt durch Spree Commerce."
   },
   "home": {

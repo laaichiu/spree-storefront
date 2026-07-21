@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { POLICY_LINKS } from "@/lib/constants/policies";
 import { getStoreDescription, getStoreName } from "@/lib/store";
 import { CurrentYear } from "./CurrentYear";
+import { RegionPreferences } from "./RegionPreferences";
 
 const storeName = getStoreName();
 const storeDescription = getStoreDescription();
@@ -148,12 +149,14 @@ export async function Footer({
           </div>
         </div>
 
-        <div className="mt-8 pt-8 border-t border-neutral-800 text-xs text-neutral-400 text-center">
-          <p>
+        <div className="mt-8 grid gap-6 border-t border-neutral-800 pt-8 md:grid-cols-2 md:items-center">
+          <RegionPreferences />
+          <p className="text-xs text-neutral-400 md:text-right">
             &copy; <CurrentYear /> {storeName}. {t("poweredBy")}{" "}
             <Link
               href="https://spreecommerce.org"
               target="_blank"
+              rel="noopener noreferrer"
               className="text-neutral-400 hover:text-neutral-200 underline transition-colors"
             >
               Spree Commerce

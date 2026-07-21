@@ -54,6 +54,13 @@
     "cart": "Panier",
     "policies": "Politiques",
     "poweredBy": "Propulse par",
+    "regionPreferences": "Préférences régionales",
+    "regionPreferencesDescription": "Choisissez la région et la langue dans lesquelles vous souhaitez faire vos achats. La devise dépend de la région sélectionnée.",
+    "region": "Région",
+    "language": "Langue",
+    "updatePreferences": "Mettre à jour les préférences",
+    "updatingPreferences": "Mise à jour des préférences...",
+    "updatePreferencesFailed": "Impossible de mettre à jour vos préférences régionales. Veuillez réessayer.",
     "copyright": "\u00a9 {year} {storeName}. Propulse par Spree Commerce."
   },
   "home": {

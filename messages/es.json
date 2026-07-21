@@ -54,6 +54,13 @@
     "cart": "Carrito",
     "policies": "Politicas",
     "poweredBy": "Impulsado por",
+    "regionPreferences": "Preferencias regionales",
+    "regionPreferencesDescription": "Elige la región y el idioma en los que quieres comprar. La moneda depende de la región seleccionada.",
+    "region": "Región",
+    "language": "Idioma",
+    "updatePreferences": "Actualizar preferencias",
+    "updatingPreferences": "Actualizando preferencias...",
+    "updatePreferencesFailed": "No pudimos actualizar tus preferencias regionales. Inténtalo de nuevo.",
     "copyright": "\u00a9 {year} {storeName}. Impulsado por Spree Commerce."
   },
   "home": {

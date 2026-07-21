@@ -54,6 +54,13 @@
     "cart": "Koszyk",
     "policies": "Regulaminy",
     "poweredBy": "Zasilany przez",
+    "regionPreferences": "Preferencje regionalne",
+    "regionPreferencesDescription": "Wybierz region i język zakupów. Waluta jest ustawiana na podstawie wybranego regionu.",
+    "region": "Region",
+    "language": "Język",
+    "updatePreferences": "Zaktualizuj preferencje",
+    "updatingPreferences": "Aktualizowanie preferencji...",
+    "updatePreferencesFailed": "Nie udało się zaktualizować preferencji regionalnych. Spróbuj ponownie.",
     "copyright": "© {year} {storeName}. Zasilany przez Spree Commerce."
   },
   "home": {
