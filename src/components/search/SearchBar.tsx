@@ -4,7 +4,7 @@ import type { Product } from "@spree/sdk";
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   InputGroup,
   InputGroupAddon,
@@ -31,9 +31,29 @@ export function SearchBar({ basePath, autoFocus, onNavigate }: SearchBarProps) {
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
+
+  // The search stays mounted so its query and results survive closing.
+  // Focus is an external browser interaction, so an effect is appropriate here.
+  useEffect(() => {
+    if (autoFocus) {
+      inputRef.current?.focus();
+    }
+  }, [autoFocus]);
+
+  useEffect(() => {
+    return () => {
+      requestIdRef.current += 1;
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Fetch suggestions
   const fetchSuggestions = useCallback(
@@ -79,10 +99,13 @@ export function SearchBar({ basePath, autoFocus, onNavigate }: SearchBarProps) {
 
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
+      debounceRef.current = null;
     }
 
     if (value.length >= 2) {
+      setLoading(true);
       debounceRef.current = setTimeout(() => {
+        debounceRef.current = null;
         fetchSuggestions(value);
       }, 300);
     } else {
@@ -91,37 +114,68 @@ export function SearchBar({ basePath, autoFocus, onNavigate }: SearchBarProps) {
     }
   };
 
+  const resetSearch = () => {
+    requestIdRef.current += 1;
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+    setQuery("");
+    setSuggestions([]);
+    setIsOpen(false);
+    setLoading(false);
+    setSelectedIndex(-1);
+  };
+
+  const submitSearch = () => {
+    const searchQuery = query.trim();
+    if (!searchQuery) return;
+
+    router.push(`${basePath}/products?q=${encodeURIComponent(searchQuery)}`);
+    resetSearch();
+    inputRef.current?.blur();
+    onNavigate?.();
+  };
+
   // Handle form submit
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (query.trim()) {
-      router.push(`${basePath}/products?q=${encodeURIComponent(query.trim())}`);
-      setIsOpen(false);
-      inputRef.current?.blur();
-      onNavigate?.();
-    }
+    submitSearch();
   };
 
   // Handle suggestion click
   const handleSuggestionClick = (product: Product, index: number) => {
     trackSelectItem(product, "quick-search", "Quick Search", index, currency);
     router.push(`${basePath}/products/${product.slug}`);
-    setIsOpen(false);
-    setQuery("");
+    resetSearch();
     onNavigate?.();
   };
 
   // Close suggestions on blur — delayed to allow click on suggestions
   const handleBlur = () => {
     blurTimeoutRef.current = setTimeout(() => {
+      blurTimeoutRef.current = null;
       setIsOpen(false);
     }, 200);
+  };
+
+  const handleFocus = () => {
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+    setIsOpen(true);
   };
 
   // Cancel blur timeout when interacting with suggestions
   const handleSuggestionsMouseDown = () => {
     if (blurTimeoutRef.current) {
       clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
     }
   };
 
@@ -144,6 +198,9 @@ export function SearchBar({ basePath, autoFocus, onNavigate }: SearchBarProps) {
         if (selectedIndex >= 0) {
           e.preventDefault();
           handleSuggestionClick(suggestions[selectedIndex], selectedIndex);
+        } else {
+          e.preventDefault();
+          submitSearch();
         }
         break;
       case "Escape":
@@ -158,28 +215,30 @@ export function SearchBar({ basePath, autoFocus, onNavigate }: SearchBarProps) {
   return (
     <div className="relative">
       <form onSubmit={handleSubmit}>
-        <InputGroup>
+        <InputGroup className="h-12 rounded-none border-0 has-[[data-slot=input-group-control]:focus]:border-0 has-[[data-slot=input-group-control]:focus]:[outline:none]">
           <InputGroupInput
             ref={inputRef}
-            type="search"
+            type="text"
+            inputMode="search"
+            enterKeyHint="search"
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}
-            onFocus={() => setIsOpen(true)}
+            onFocus={handleFocus}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             placeholder={t("search")}
-            autoFocus={autoFocus}
             role="combobox"
             aria-expanded={showSuggestions}
-            aria-controls="search-suggestions"
+            aria-controls={showSuggestions ? "search-suggestions" : undefined}
             aria-activedescendant={
               selectedIndex >= 0 ? `search-option-${selectedIndex}` : undefined
             }
             aria-autocomplete="list"
             aria-label={t("search")}
+            className="px-2 text-sm tracking-[0.18em] uppercase placeholder:text-gray-500 placeholder:opacity-100"
           />
-          <InputGroupAddon>
-            <Search />
+          <InputGroupAddon className="pl-0 text-gray-700">
+            <Search className="size-[18px] stroke-[1.5]" />
           </InputGroupAddon>
         </InputGroup>
       </form>
@@ -246,7 +305,7 @@ export function SearchBar({ basePath, autoFocus, onNavigate }: SearchBarProps) {
                         router.push(
                           `${basePath}/products?q=${encodeURIComponent(query.trim())}`,
                         );
-                        setIsOpen(false);
+                        resetSearch();
                         onNavigate?.();
                       }}
                       className="w-full p-3 text-sm text-primary hover:bg-gray-50 text-center font-medium"

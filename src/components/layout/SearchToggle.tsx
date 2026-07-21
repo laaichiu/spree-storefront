@@ -4,7 +4,7 @@ import { Search, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 const SearchBar = dynamic(
@@ -41,21 +41,43 @@ export function SearchToggle({
   const t = useTranslations("header");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchTriggerRef = useRef<HTMLButtonElement>(null);
+  const navigationCloseTimeoutRef = useRef<number | null>(null);
 
   const closeSearch = useCallback(() => {
     setSearchOpen(false);
     searchTriggerRef.current?.focus();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (navigationCloseTimeoutRef.current) {
+        clearTimeout(navigationCloseTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gray-200 h-16 relative">
-      {/* Normal header content */}
+    <header className="sticky top-0 z-50 h-16">
+      {/* This white layer masks the search drawer while it slides down. */}
       <div
-        className={`absolute inset-0 transition-all duration-300 ease-in-out ${
-          searchOpen
-            ? "translate-y-4 opacity-0 pointer-events-none"
-            : "translate-y-0 opacity-100"
-        }`}
+        className="relative z-30 h-full border-b border-gray-300 bg-white"
+        onPointerDownCapture={(event) => {
+          if (!searchOpen) return;
+          const target = event.target;
+          if (
+            target instanceof Element &&
+            target.closest("[data-search-trigger]")
+          ) {
+            return;
+          }
+          if (navigationCloseTimeoutRef.current) {
+            clearTimeout(navigationCloseTimeoutRef.current);
+          }
+          navigationCloseTimeoutRef.current = window.setTimeout(() => {
+            navigationCloseTimeoutRef.current = null;
+            setSearchOpen(false);
+          }, 0);
+        }}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-full">
           <div className="flex items-center h-full w-full">
@@ -67,53 +89,63 @@ export function SearchToggle({
 
             {/* Right section */}
             <div className="flex items-center flex-1 justify-end space-x-2">
-              {rightStart}
+              <div className="contents">{rightStart}</div>
 
               {/* Search toggle */}
               <Button
                 ref={searchTriggerRef}
+                data-search-trigger
                 variant="ghost"
                 size="icon-lg"
-                onClick={() => setSearchOpen(true)}
-                aria-label={t("openSearch")}
+                onClick={() => {
+                  if (searchOpen) {
+                    closeSearch();
+                  } else {
+                    setSearchOpen(true);
+                  }
+                }}
+                aria-label={searchOpen ? t("closeSearch") : t("openSearch")}
                 aria-expanded={searchOpen}
-                aria-controls="search-overlay"
+                aria-controls="header-search"
               >
                 <Search className="size-5" />
               </Button>
 
-              {rightEnd}
+              <div className="contents">{rightEnd}</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Click-outside overlay */}
-      {searchOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={closeSearch}
-          role="presentation"
-        />
-      )}
+      {/* The scrim begins below the search bar, leaving navigation visible. */}
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-label={t("closeSearch")}
+        aria-hidden={!searchOpen}
+        onClick={closeSearch}
+        className={`fixed inset-x-0 bottom-0 top-16 z-10 bg-black/50 transition-opacity duration-300 motion-reduce:transition-none ${
+          searchOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      />
 
-      {/* Search bar overlay */}
+      {/* Search bar drawer */}
       <div
-        id="search-overlay"
+        id="header-search"
+        role="dialog"
+        aria-label={t("openSearch")}
+        aria-hidden={!searchOpen}
         inert={!searchOpen}
         onKeyDown={(e) => {
           if (e.key === "Escape") closeSearch();
         }}
-        className={`absolute inset-0 z-50 transition-all duration-300 ease-in-out ${
-          searchOpen
-            ? "translate-y-0 opacity-100"
-            : "-translate-y-4 opacity-0 pointer-events-none"
+        className={`absolute inset-x-0 top-full z-20 h-16 border-b border-gray-300 bg-white will-change-transform transition-transform duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+          searchOpen ? "translate-y-0" : "pointer-events-none -translate-y-full"
         }`}
       >
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center gap-3">
+        <div className="container mx-auto flex h-full items-center gap-3 px-4 sm:px-6 lg:px-8">
           <div className="flex-1">
             <SearchBar
-              key={String(searchOpen)}
               basePath={basePath}
               autoFocus={searchOpen}
               onNavigate={closeSearch}
