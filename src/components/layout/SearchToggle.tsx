@@ -21,7 +21,7 @@ const SearchBar = dynamic(
 
 interface SearchToggleProps {
   basePath: string;
-  /** Left slot (e.g. mobile menu) */
+  /** Left slot (desktop category navigation or mobile menu) */
   left: ReactNode;
   /** Center slot (e.g. logo) */
   center: ReactNode;
@@ -60,7 +60,7 @@ export function SearchToggle({
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-full">
           <div className="flex items-center h-full w-full">
             {/* Left section */}
-            <div className="flex items-center flex-1">{left}</div>
+            <div className="flex min-w-0 items-center flex-1">{left}</div>
 
             {/* Center section */}
             <div className="flex justify-center min-w-0">{center}</div>

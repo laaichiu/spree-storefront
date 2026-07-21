@@ -34,6 +34,7 @@
     "home": "Strona główna",
     "allProducts": "Wszystkie produkty",
     "contact": "Kontakt",
+    "allCategory": "Wszystkie {category}",
     "viewAllCategory": "Zobacz wszystkie {category}",
     "openSearch": "Otwórz wyszukiwanie",
     "closeSearch": "Zamknij wyszukiwanie",
