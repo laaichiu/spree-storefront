@@ -23,7 +23,9 @@ const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 const topLevelClass =
-  "relative inline-flex h-16 items-center whitespace-nowrap text-sm font-medium text-gray-700 transition-colors after:absolute after:bottom-3 after:left-0 after:h-0.5 after:w-full after:origin-center after:scale-x-0 after:bg-current after:transition-transform after:duration-200 hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2";
+  "inline-flex h-16 items-center whitespace-nowrap text-sm font-medium text-gray-700 transition-colors hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2";
+const topLevelLabelClass =
+  "relative inline-block after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-center after:scale-x-0 after:bg-current after:transition-transform after:duration-200";
 
 function findPreferredPanelLink(
   panel: HTMLElement | null,
@@ -339,10 +341,7 @@ export function DesktopMegaMenu({
                     ? "location"
                     : undefined
               }
-              className={cn(
-                topLevelClass,
-                isActive && "after:scale-x-100 text-gray-950",
-              )}
+              className={cn(topLevelClass, isActive && "text-gray-950")}
               onClick={closeCategory}
               onFocus={() => handleCategoryEnter(category)}
               onKeyDown={(event) => {
@@ -357,7 +356,14 @@ export function DesktopMegaMenu({
               }}
               onPointerEnter={() => handleCategoryEnter(category)}
             >
-              {category.name}
+              <span
+                className={cn(
+                  topLevelLabelClass,
+                  isActive && "after:scale-x-100",
+                )}
+              >
+                {category.name}
+              </span>
             </Link>
           );
         })}
