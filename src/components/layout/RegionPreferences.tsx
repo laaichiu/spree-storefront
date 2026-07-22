@@ -122,7 +122,7 @@ export function RegionPreferences({
           type="button"
           aria-label={t("regionPreferences")}
           className={cn(
-            "relative flex w-fit items-center gap-2 pb-1 text-left font-semibold uppercase tracking-wide outline-none transition-colors after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-center after:scale-x-0 after:bg-current after:transition-transform after:duration-200 hover:after:scale-x-100 focus-visible:after:scale-x-100",
+            "relative flex w-fit items-center gap-2 pb-1 text-left font-semibold uppercase tracking-wide outline-none transition-colors after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-current after:transition-transform after:duration-500 after:ease-in-out hover:after:origin-left hover:after:scale-x-100 focus-visible:after:origin-left focus-visible:after:scale-x-100 motion-reduce:after:transition-none",
             variant === "menu"
               ? "text-sm text-foreground hover:text-foreground focus-visible:text-foreground"
               : "text-xs text-neutral-300 hover:text-white focus-visible:text-white",

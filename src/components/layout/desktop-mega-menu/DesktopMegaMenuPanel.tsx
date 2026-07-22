@@ -25,7 +25,9 @@ interface DesktopMegaMenuPanelProps {
 }
 
 const panelLinkClass =
-  "relative block w-fit max-w-full text-sm text-gray-700 transition-colors after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-center after:scale-x-0 after:bg-current after:transition-transform after:duration-200 hover:text-gray-950 hover:after:scale-x-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2";
+  "relative block w-fit max-w-full text-sm text-gray-700 transition-colors after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-current after:transition-transform after:duration-500 after:ease-in-out hover:text-gray-950 hover:after:origin-left hover:after:scale-x-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:after:origin-left motion-reduce:after:transition-none";
+const activePanelLinkClass =
+  "after:origin-left after:scale-x-100 text-gray-950";
 
 function getCategoryHref(basePath: string, category: Category): string {
   return `${basePath}/c/${category.permalink}`;
@@ -102,7 +104,7 @@ export function DesktopMegaMenuPanel({
                   aria-current={isActiveCategory ? "page" : undefined}
                   className={cn(
                     panelLinkClass,
-                    isActiveCategory && "after:scale-x-100 text-gray-950",
+                    isActiveCategory && activePanelLinkClass,
                   )}
                 >
                   {t("allCategory", { category: activeCategory.name })}
@@ -133,8 +135,7 @@ export function DesktopMegaMenuPanel({
                         }
                         className={cn(
                           panelLinkClass,
-                          isCurrentCategory &&
-                            "after:scale-x-100 text-gray-950",
+                          isCurrentCategory && activePanelLinkClass,
                         )}
                       >
                         {child.name}
@@ -164,7 +165,7 @@ export function DesktopMegaMenuPanel({
                         className={cn(
                           panelLinkClass,
                           "font-semibold text-gray-950",
-                          isCurrentCategory && "after:scale-x-100",
+                          isCurrentCategory && activePanelLinkClass,
                         )}
                       >
                         {child.name}
@@ -193,8 +194,7 @@ export function DesktopMegaMenuPanel({
                               className={cn(
                                 panelLinkClass,
                                 "text-gray-600",
-                                isCurrentGrandchild &&
-                                  "after:scale-x-100 text-gray-950",
+                                isCurrentGrandchild && activePanelLinkClass,
                               )}
                             >
                               {grandchild.name}

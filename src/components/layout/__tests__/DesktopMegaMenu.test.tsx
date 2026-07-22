@@ -144,9 +144,11 @@ describe("DesktopMegaMenu", () => {
     vi.useFakeTimers();
     renderMenu();
     const trigger = screen.getByRole("link", { name: "Kitchen" });
+    const label = trigger.querySelector("span");
     const navigation = screen.getByRole("navigation", { name: "categories" });
 
     fireEvent.pointerEnter(trigger);
+    expect(label).toHaveClass("after:origin-left", "after:scale-x-100");
     expect(screen.getByRole("region", { name: "Kitchen" })).toBeInTheDocument();
 
     fireEvent.pointerLeave(navigation);
@@ -156,6 +158,73 @@ describe("DesktopMegaMenu", () => {
     act(() => vi.advanceTimersByTime(1));
     expect(
       screen.queryByRole("region", { name: "Kitchen" }),
+    ).not.toBeInTheDocument();
+    expect(label).toHaveClass("after:origin-right", "after:scale-x-0");
+  });
+
+  it("keeps a category active until its navigation completes", () => {
+    const { rerender } = renderMenu();
+    const trigger = screen.getByRole("link", { name: "Kitchen" });
+    const label = trigger.querySelector("span");
+
+    expect(label).toHaveClass("after:origin-right");
+    fireEvent.pointerEnter(trigger);
+    expect(label).toHaveClass("after:origin-left");
+    expect(label).toHaveClass("after:duration-500", "after:ease-in-out");
+    expect(label).toHaveClass("after:scale-x-100");
+
+    trigger.addEventListener("click", (event) => event.preventDefault(), {
+      once: true,
+    });
+    fireEvent.click(trigger);
+
+    expect(label).toHaveClass("after:scale-x-100");
+    expect(screen.getByRole("region", { name: "Kitchen" })).toBeInTheDocument();
+
+    navigationState.pathname = "/us/en/c/kitchen";
+    rerender(
+      <>
+        <DesktopMegaMenu rootCategories={rootCategories} basePath="/us/en" />
+        <button type="button">Outside control</button>
+      </>,
+    );
+
+    expect(label).toHaveClass("after:scale-x-100");
+    expect(
+      screen.queryByRole("region", { name: "Kitchen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps a cross-category destination active during child navigation", () => {
+    navigationState.pathname = "/us/en/c/kitchen";
+    const { rerender } = renderMenu();
+    const trigger = screen.getByRole("link", { name: "Air & Climate" });
+    const label = trigger.querySelector("span");
+
+    fireEvent.pointerEnter(trigger);
+    const childLink = screen.getByRole("link", { name: "Air Purifiers" });
+    childLink.addEventListener("click", (event) => event.preventDefault(), {
+      once: true,
+    });
+    fireEvent.click(childLink);
+
+    expect(trigger).toHaveFocus();
+    expect(label).toHaveClass("after:origin-left", "after:scale-x-100");
+    expect(
+      screen.getByRole("region", { name: "Air & Climate" }),
+    ).toBeInTheDocument();
+
+    navigationState.pathname = "/us/en/c/air-and-climate/air-purifiers";
+    rerender(
+      <>
+        <DesktopMegaMenu rootCategories={rootCategories} basePath="/us/en" />
+        <button type="button">Outside control</button>
+      </>,
+    );
+
+    expect(label).toHaveClass("after:origin-left", "after:scale-x-100");
+    expect(
+      screen.queryByRole("region", { name: "Air & Climate" }),
     ).not.toBeInTheDocument();
   });
 

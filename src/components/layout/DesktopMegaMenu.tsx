@@ -25,7 +25,7 @@ const FOCUSABLE_SELECTOR =
 const topLevelClass =
   "inline-flex h-16 items-center whitespace-nowrap text-sm font-medium text-gray-700 transition-colors hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2";
 const topLevelLabelClass =
-  "relative inline-block after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-center after:scale-x-0 after:bg-current after:transition-transform after:duration-200";
+  "relative inline-block after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-right after:scale-x-0 after:bg-current after:transition-transform after:duration-500 after:ease-in-out motion-reduce:after:transition-none";
 
 function findPreferredPanelLink(
   panel: HTMLElement | null,
@@ -185,12 +185,15 @@ export function DesktopMegaMenu({
     }
 
     cancelScheduledClose();
-    closeCategory();
+    if (activeCategoryId === currentCategoryId) {
+      closeCategory();
+    }
     focusCategoryTrigger(activeCategoryId);
   }, [
     activeCategoryId,
     cancelScheduledClose,
     closeCategory,
+    currentCategoryId,
     focusCategoryTrigger,
   ]);
 
@@ -342,7 +345,7 @@ export function DesktopMegaMenu({
                     : undefined
               }
               className={cn(topLevelClass, isActive && "text-gray-950")}
-              onClick={closeCategory}
+              onClick={isCurrentCategory ? closeCategory : undefined}
               onFocus={() => handleCategoryEnter(category)}
               onKeyDown={(event) => {
                 if (
@@ -359,7 +362,7 @@ export function DesktopMegaMenu({
               <span
                 className={cn(
                   topLevelLabelClass,
-                  isActive && "after:scale-x-100",
+                  isActive && "after:origin-left after:scale-x-100",
                 )}
               >
                 {category.name}
