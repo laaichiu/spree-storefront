@@ -2,6 +2,7 @@
   "name": "nextjs-starter-spree",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.33.4",
   "scripts": {
     "dev": "next dev -p 3001 --turbopack",
     "build": "next build",
@@ -53,6 +54,22 @@
     "mute-stream": "^3.0.0",
     "sharp": "^0.35.3",
     "@hono/node-server": "^2.0.5"
+  },
+  "pnpm": {
+    "overrides": {
+      "minimatch": "^10.2.1",
+      "postcss": "^8.5.10",
+      "mute-stream": "^3.0.0",
+      "sharp": "^0.35.3",
+      "@hono/node-server": "^2.0.5"
+    },
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@sentry/cli",
+      "@swc/core",
+      "esbuild",
+      "lefthook"
+    ]
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.14",

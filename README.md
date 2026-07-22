@@ -106,7 +106,7 @@ The storefront lands in `apps/storefront/`.
 1. Install dependencies:
 
     ```bash
-    npm install
+    pnpm install
     ```
 
 2. Copy the environment file and configure:
@@ -129,7 +129,7 @@ These two are all you need to boot. Optional variables cover analytics, error tr
 ### Development
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 Open [http://localhost:3001](http://localhost:3001) in your browser.
@@ -141,13 +141,13 @@ Testing Apple Pay / Google Pay locally needs a public HTTPS URL (Stripe verifies
 ### Production Build
 
 ```bash
-npm run build
-npm start
+pnpm run build
+pnpm start
 ```
 
 ### Testing
 
-Unit and integration tests run through Vitest (`npm test`); end-to-end tests run through Playwright against a real Spree backend in Docker (`npm run e2e:up && npm run test:e2e`). See the [Testing guide](https://spreecommerce.org/docs/developer/storefront/nextjs/testing) for the full E2E setup, Stripe test keys, CI, and running against your own backend.
+Unit and integration tests run through Vitest (`pnpm test`); end-to-end tests run through Playwright against a real Spree backend in Docker (`pnpm run e2e:up && pnpm run test:e2e`). See the [Testing guide](https://spreecommerce.org/docs/developer/storefront/nextjs/testing) for the full E2E setup, Stripe test keys, CI, and running against your own backend.
 
 ## Multi-Region
 

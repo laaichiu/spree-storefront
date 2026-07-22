@@ -29,7 +29,7 @@ readonly SPREE_URL="http://localhost:4000"
 #
 #   export STRIPE_PUBLISHABLE_KEY=pk_test_…
 #   export STRIPE_SECRET_KEY=sk_test_…
-#   npm run e2e:up
+#   pnpm run e2e:up
 #
 # The secret key is never committed: GitHub's push protection flags any
 # sk_test_ literal as a secret regardless of provenance. In CI,
@@ -61,7 +61,7 @@ fi
 # happen from the backend dir.
 cd "$BACKEND_DIR"
 
-# Both callers (`npm run e2e:up` and CI) already gate on the compose
+# Both callers (`pnpm run e2e:up` and CI) already gate on the compose
 # healthcheck via `up -d --wait`; this guard only covers running the
 # script standalone against a still-booting stack.
 echo "==> Waiting for Spree to accept HTTP requests at $SPREE_URL/up"
