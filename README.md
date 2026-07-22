@@ -14,7 +14,9 @@ A production-ready, headless ecommerce storefront for [Spree Commerce](https://s
 
 **TypeScript SDK.** [@spree/sdk](https://www.npmjs.com/package/@spree/sdk) is an official typed client for every Store API endpoint (OpenAPI 3.0 documented). Autocomplete and type safety in your editor, no codegen step to maintain.
 
-**Multi-region out of the box.** Country, currency, and language switching via URL segments (`/us/en/`, `/de/de/`, `/uk/en/`), powered by Spree [Markets](https://spreecommerce.org/docs/developer/core-concepts/markets). Distinct selling regions bundling geography, currency, and locale in a single store.
+**DTC and B2B out of the box** run both DTC and B2B (wholesale portal) from a single instance powered by [Spree Channels](https://spreecommerce.org/docs/developer/core-concepts/channels), with exclusive customer group pricing and product gating.
+
+**Multi-region out of the box.** Country, currency, and language switching via URL segments (`/us/en/`, `/de/de/`, `/uk/en/`), powered by [Spree Markets](https://spreecommerce.org/docs/developer/core-concepts/markets). Distinct selling regions bundling geography, currency, and locale in a single store.
 
 **One-page checkout.** Guest and authenticated users, multi-shipment, coupon codes, gift cards, and store credit. Stripe, PayPal, and Adyen via Payment Sessions. Card data never touches your server. [Swap providers](https://spreecommerce.org/docs/developer/core-concepts/payments) easily.
 
@@ -47,6 +49,7 @@ No external performance plugins. No edge-side rendering hacks. The architecture 
 | **One-page Checkout** | Guest visitors and signed-in users supported, multi-shipments supported natively, Coupon Codes, Gift Cards, Store Credit |
 | **Stripe payments** | native Stripe payment support with Stripe SDKs, PCI-Compliant, 3DS-Secure, use Credit Cards, Apple Pay, Google Pay, Klarna, Affirm, SEPA payments, and all other payment methods provided by [Spree Stripe integration](https://github.com/spree/spree_stripe) |
 | **Customer Account** | Full account management: Profile management, Order history with detailed order view, Address book (create, edit, delete), Gift Cards and Store Credit, Saved payment methods |
+| **Wholesale portal** | Storefront gating, per-customer pricing and product availability, account approval workflows |
 | **Multi-Region Support** | Country, currency, and language switching via URL segments, powered by [Spree Markets](https://spreecommerce.org/docs/developer/core-concepts/markets) |
 | **Responsive Design** | Mobile-first Tailwind CSS styling |
 | **Google Tag Manager** and **Google Analytics 4 Ecommerce events** | tracking supported natively |
