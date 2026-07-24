@@ -43,7 +43,7 @@ vi.mock("@/contexts/StoreContext", () => ({
   StoreProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-import CountryLocaleLayout from "./layout";
+import { CountryLocaleLayoutContent } from "./layout";
 
 function country(iso: string): Country {
   return {
@@ -94,7 +94,7 @@ describe("CountryLocaleLayout Market fallback", () => {
     );
 
     await expect(
-      CountryLocaleLayout({
+      CountryLocaleLayoutContent({
         children: <main />,
         params: Promise.resolve({ country: "ar", locale: "en" }),
       }),
@@ -131,7 +131,7 @@ describe("CountryLocaleLayout Market fallback", () => {
     );
 
     await expect(
-      CountryLocaleLayout({
+      CountryLocaleLayoutContent({
         children: <main />,
         params: Promise.resolve({ country: "pl", locale: "pl" }),
       }),
@@ -152,7 +152,7 @@ describe("CountryLocaleLayout Market fallback", () => {
     );
 
     await expect(
-      CountryLocaleLayout({
+      CountryLocaleLayoutContent({
         children: <main />,
         params: Promise.resolve({ country: "zz", locale: "en" }),
       }),
@@ -169,7 +169,7 @@ describe("CountryLocaleLayout Market fallback", () => {
     mocks.getMarkets.mockResolvedValue({ data: markets });
 
     await expect(
-      CountryLocaleLayout({
+      CountryLocaleLayoutContent({
         children: <main />,
         params: Promise.resolve({ country: "us", locale: "en" }),
       }),
@@ -187,7 +187,7 @@ describe("CountryLocaleLayout Market fallback", () => {
     );
 
     await expect(
-      CountryLocaleLayout({
+      CountryLocaleLayoutContent({
         children: <main />,
         params: Promise.resolve({ country: "zz", locale: "en" }),
       }),

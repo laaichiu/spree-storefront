@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
+import { Suspense } from "react";
 import "../../globals.css";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { DocumentShell } from "@/components/layout/DocumentShell";
@@ -75,7 +76,21 @@ export async function generateMetadata({
   return generateStoreMetadata({ locale });
 }
 
-export default async function CountryLocaleLayout({
+/**
+ * Market resolution can read request headers when it needs to preserve the
+ * current path during a fallback redirect. Keep the whole route decision
+ * behind one boundary so Cache Components never prerender an unvalidated
+ * Market context or treat that request data as a blocking route error.
+ */
+export default function CountryLocaleLayout(props: CountryLocaleLayoutProps) {
+  return (
+    <Suspense fallback={null}>
+      <CountryLocaleLayoutContent {...props} />
+    </Suspense>
+  );
+}
+
+export async function CountryLocaleLayoutContent({
   children,
   params,
 }: CountryLocaleLayoutProps) {
