@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPolicy } from "@/lib/data/policies";
-import { getStoreName } from "@/lib/store";
+import { buildCanonicalUrl } from "@/lib/seo";
+import { getStoreName, getStoreUrl } from "@/lib/store";
 
 interface PolicyPageProps {
   params: Promise<{
@@ -15,7 +16,7 @@ interface PolicyPageProps {
 export async function generateMetadata({
   params,
 }: PolicyPageProps): Promise<Metadata> {
-  const { slug, locale } = await params;
+  const { country, locale, slug } = await params;
   const policy = await getPolicy(slug);
 
   const storeName = getStoreName();
@@ -31,12 +32,23 @@ export async function generateMetadata({
     };
   }
 
+  const description = `${policy.name} — ${storeName}`;
+  const storeUrl = getStoreUrl();
+  const canonicalUrl = storeUrl
+    ? buildCanonicalUrl(
+        storeUrl,
+        `/${country}/${locale}/policies/${policy.slug}`,
+      )
+    : undefined;
+
   return {
-    title: storeName ? `${policy.name} | ${storeName}` : policy.name,
-    description: `${policy.name} — ${storeName}`,
+    title: policy.name,
+    description,
+    ...(canonicalUrl ? { alternates: { canonical: canonicalUrl } } : {}),
     openGraph: {
       title: policy.name,
-      description: `${policy.name} — ${storeName}`,
+      description,
+      ...(canonicalUrl ? { url: canonicalUrl } : {}),
     },
   };
 }
