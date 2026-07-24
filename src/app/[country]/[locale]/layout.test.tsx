@@ -23,6 +23,10 @@ vi.mock("next-intl", () => ({
     children,
 }));
 vi.mock("@/lib/data/markets", () => ({ getMarkets: mocks.getMarkets }));
+vi.mock("@/lib/store", () => ({
+  getDefaultCountry: () => "us",
+  getDefaultLocale: () => "en",
+}));
 vi.mock("@/components/layout/DocumentShell", () => ({
   DocumentShell: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -98,6 +102,45 @@ describe("CountryLocaleLayout Market fallback", () => {
     expect(mocks.redirect).toHaveBeenCalledWith(
       "/ar/es/products/coffee?sort=price",
     );
+    expect(mocks.getMarkets).toHaveBeenCalledWith({
+      country: "us",
+      locale: "en",
+    });
+  });
+
+  it("redirects a storefront-supported locale that is unavailable in the Market", async () => {
+    mocks.getMarkets.mockResolvedValue({
+      data: [
+        market(),
+        market({
+          id: "market-eu",
+          name: "Europe",
+          currency: "EUR",
+          default: false,
+          default_locale: "de",
+          supported_locales: ["de", "es", "fr"],
+          country_isos: ["PL"],
+          countries: [country("PL")],
+        }),
+      ],
+    });
+    mocks.headers.mockResolvedValue(
+      new Headers({
+        [REQUEST_PATHNAME_HEADER]: "/pl/pl",
+      }),
+    );
+
+    await expect(
+      CountryLocaleLayout({
+        children: <main />,
+        params: Promise.resolve({ country: "pl", locale: "pl" }),
+      }),
+    ).rejects.toThrow("redirect:/pl/de");
+    expect(mocks.redirect).toHaveBeenCalledWith("/pl/de");
+    expect(mocks.getMarkets).toHaveBeenCalledWith({
+      country: "us",
+      locale: "en",
+    });
   });
 
   it("redirects an unknown country to the default Market and keeps the page", async () => {
