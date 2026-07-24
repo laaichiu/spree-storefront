@@ -158,4 +158,39 @@ describe("CountryLocaleLayout Market fallback", () => {
       }),
     ).rejects.toThrow("redirect:/us/en/products/coffee");
   });
+
+  it.each([
+    ["an empty Markets response", []],
+    [
+      "a Market without countries",
+      [market({ countries: [], country_isos: [] })],
+    ],
+  ])("does not redirect the default route to itself for %s", async (_, markets) => {
+    mocks.getMarkets.mockResolvedValue({ data: markets });
+
+    await expect(
+      CountryLocaleLayout({
+        children: <main />,
+        params: Promise.resolve({ country: "us", locale: "en" }),
+      }),
+    ).resolves.toBeDefined();
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+
+  it("redirects a non-default route once when no Market target is available", async () => {
+    mocks.getMarkets.mockResolvedValue({ data: [] });
+    mocks.headers.mockResolvedValue(
+      new Headers({
+        [REQUEST_PATHNAME_HEADER]: "/zz/en/products/coffee",
+        [REQUEST_SEARCH_HEADER]: "?sort=price",
+      }),
+    );
+
+    await expect(
+      CountryLocaleLayout({
+        children: <main />,
+        params: Promise.resolve({ country: "zz", locale: "en" }),
+      }),
+    ).rejects.toThrow("redirect:/us/en/products/coffee?sort=price");
+  });
 });

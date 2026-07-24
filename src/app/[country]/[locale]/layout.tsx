@@ -97,22 +97,29 @@ export default async function CountryLocaleLayout({
     .then((res) => res.data)
     .catch(() => null);
 
-  // Let route-level data handling surface an API outage instead of redirecting
-  // the request back to itself. Static storefront locale validation still runs.
-  if (markets === null) {
+  const renderStorefront = async (
+    availableMarkets: NonNullable<typeof markets>,
+  ) => {
     const messages = await loadMessages(requestedLocale);
+
     return (
       <DocumentShell locale={requestedLocale}>
         <CountryLocaleProviders
           country={country}
           locale={requestedLocale}
-          markets={[]}
+          markets={availableMarkets}
           messages={messages}
         >
           {children}
         </CountryLocaleProviders>
       </DocumentShell>
     );
+  };
+
+  // Let route-level data handling surface an API outage instead of redirecting
+  // the request back to itself. Static storefront locale validation still runs.
+  if (markets === null) {
+    return renderStorefront([]);
   }
 
   // Validate that the URL country belongs to an available market.
@@ -121,11 +128,23 @@ export default async function CountryLocaleLayout({
 
   if (!currentMarket) {
     const defaultTarget = getDefaultMarketLocaleTarget(markets);
-    const fallbackCountry = defaultTarget?.country ?? getDefaultCountry();
+    const fallbackCountry = (
+      defaultTarget?.country ?? getDefaultCountry()
+    ).toLowerCase();
     const fallbackLocale =
       defaultTarget?.locale ??
       resolveSupportedLocale(getDefaultLocale()) ??
       DEFAULT_LOCALE;
+
+    // A successful but unusable Markets response may only resolve to the route
+    // already being handled. Render through the outage-safe path instead of
+    // creating an infinite redirect loop.
+    if (
+      fallbackCountry === country.toLowerCase() &&
+      fallbackLocale === requestedLocale
+    ) {
+      return renderStorefront([]);
+    }
 
     return redirectToLocalizedRoute(fallbackCountry, fallbackLocale);
   }
@@ -139,20 +158,7 @@ export default async function CountryLocaleLayout({
     return redirectToLocalizedRoute(country, fallbackLocale);
   }
 
-  const messages = await loadMessages(requestedLocale);
-
-  return (
-    <DocumentShell locale={requestedLocale}>
-      <CountryLocaleProviders
-        country={country}
-        locale={requestedLocale}
-        markets={markets}
-        messages={messages}
-      >
-        {children}
-      </CountryLocaleProviders>
-    </DocumentShell>
-  );
+  return renderStorefront(markets);
 }
 
 interface CountryLocaleProvidersProps {
