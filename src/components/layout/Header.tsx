@@ -22,17 +22,13 @@ const LazyMobileMenu = dynamic(
   },
 );
 
-const LazyCountrySwitcher = dynamic(
+const LazyRegionPreferences = dynamic(
   () =>
-    import("@/components/layout/CountrySwitcher").then((mod) => ({
-      default: mod.CountrySwitcher,
+    import("@/components/layout/RegionPreferences").then((mod) => ({
+      default: mod.RegionPreferences,
     })),
   {
-    loading: () => (
-      <div className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-400">
-        <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
-      </div>
-    ),
+    loading: () => <div className="size-11" aria-hidden="true" />,
   },
 );
 
@@ -88,7 +84,7 @@ export async function Header({
               {t("wholesale")}
             </Link>
           )}
-          <LazyCountrySwitcher />
+          <LazyRegionPreferences variant="header" />
         </div>
       }
       rightEnd={
