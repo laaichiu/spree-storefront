@@ -14,9 +14,12 @@ async function cachedListCategories(
   return getClient().categories.list(params, options);
 }
 
-export async function getCategories(params?: CategoryListParams) {
-  const options = await getLocaleOptions();
-  return cachedListCategories(params, options);
+export async function getCategories(
+  params?: CategoryListParams,
+  options?: { locale?: string; country?: string },
+) {
+  const localeOptions = options ?? (await getLocaleOptions());
+  return cachedListCategories(params, localeOptions);
 }
 
 export async function cachedGetCategory(

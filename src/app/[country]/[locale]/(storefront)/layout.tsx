@@ -1,5 +1,7 @@
 import type { Category } from "@spree/sdk";
 import Link from "next/link";
+import { connection } from "next/server";
+import { cache, Suspense } from "react";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { getCategories } from "@/lib/data/categories";
@@ -8,6 +10,38 @@ interface StorefrontLayoutProps {
   children: React.ReactNode;
   params: Promise<{ country: string; locale: string }>;
 }
+
+interface StorefrontNavigationProps {
+  basePath: string;
+  country: string;
+  locale: string;
+}
+
+const EMPTY_CATEGORIES: Category[] = [];
+
+/**
+ * Navigation categories are optional chrome, so defer their first load until
+ * there is a real request instead of making every prerendered page contact the
+ * Store API. Primitive arguments let React deduplicate Header and Footer calls
+ * within the request; successful responses keep using the persistent cache in
+ * getCategories.
+ */
+const getRootCategories = cache(async (country: string, locale: string) => {
+  await connection();
+
+  return getCategories(
+    {
+      depth_eq: 0,
+      expand: ["children.children"],
+    },
+    { country, locale },
+  )
+    .then((res) => res.data)
+    .catch((error) => {
+      console.error("StorefrontLayout: failed to load categories", error);
+      return EMPTY_CATEGORIES;
+    });
+});
 
 function CategoryLinks({
   categories,
@@ -32,22 +66,12 @@ function CategoryLinks({
   );
 }
 
-export default async function StorefrontLayout({
-  children,
-  params,
-}: StorefrontLayoutProps) {
-  const { country, locale } = await params;
-  const basePath = `/${country}/${locale}`;
-
-  const rootCategories = await getCategories({
-    depth_eq: 0,
-    expand: ["children.children"],
-  })
-    .then((res) => res.data)
-    .catch((error) => {
-      console.error("StorefrontLayout: failed to load categories", error);
-      return [] as Category[];
-    });
+async function StorefrontHeader({
+  basePath,
+  country,
+  locale,
+}: StorefrontNavigationProps) {
+  const rootCategories = await getRootCategories(country, locale);
 
   return (
     <>
@@ -61,12 +85,66 @@ export default async function StorefrontLayout({
           <CategoryLinks categories={rootCategories} basePath={basePath} />
         </nav>
       )}
+    </>
+  );
+}
+
+async function StorefrontFooter({
+  basePath,
+  country,
+  locale,
+}: StorefrontNavigationProps) {
+  const rootCategories = await getRootCategories(country, locale);
+
+  return (
+    <Footer
+      rootCategories={rootCategories}
+      basePath={basePath}
+      locale={locale as Locale}
+    />
+  );
+}
+
+export default async function StorefrontLayout({
+  children,
+  params,
+}: StorefrontLayoutProps) {
+  const { country, locale } = await params;
+  const basePath = `/${country}/${locale}`;
+
+  return (
+    <>
+      <Suspense
+        fallback={
+          <Header
+            rootCategories={EMPTY_CATEGORIES}
+            basePath={basePath}
+            locale={locale as Locale}
+          />
+        }
+      >
+        <StorefrontHeader
+          basePath={basePath}
+          country={country}
+          locale={locale}
+        />
+      </Suspense>
       <main className="flex-1">{children}</main>
-      <Footer
-        rootCategories={rootCategories}
-        basePath={basePath}
-        locale={locale as Locale}
-      />
+      <Suspense
+        fallback={
+          <Footer
+            rootCategories={EMPTY_CATEGORIES}
+            basePath={basePath}
+            locale={locale as Locale}
+          />
+        }
+      >
+        <StorefrontFooter
+          basePath={basePath}
+          country={country}
+          locale={locale}
+        />
+      </Suspense>
     </>
   );
 }
