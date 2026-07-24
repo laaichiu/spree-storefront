@@ -40,6 +40,15 @@
     "myAccount": "Mi cuenta",
     "wholesale": "Mayorista"
   },
+  "regionPreferences": {
+    "title": "Región e idioma",
+    "description": "Elige tu región e idioma. La moneda depende de la región seleccionada.",
+    "region": "Región",
+    "language": "Idioma",
+    "updatePreferences": "Actualizar preferencias",
+    "updatingPreferences": "Actualizando preferencias...",
+    "updatePreferencesFailed": "No pudimos actualizar tus preferencias regionales. Inténtalo de nuevo."
+  },
   "footer": {
     "description": "Comercio electrónico de código abierto basado en Spree REST API, TypeScript SDK y Next.js. Alójalo tú mismo. Tus datos. Sin comisiones de plataforma.",
     "forkOnGithub": "Haz un fork de esta tienda en GitHub",

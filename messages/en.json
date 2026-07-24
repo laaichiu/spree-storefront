@@ -40,6 +40,15 @@
     "myAccount": "My Account",
     "wholesale": "Wholesale"
   },
+  "regionPreferences": {
+    "title": "Region and language",
+    "description": "Choose your region and language. Currency is set by the selected region.",
+    "region": "Region",
+    "language": "Language",
+    "updatePreferences": "Update preferences",
+    "updatingPreferences": "Updating preferences...",
+    "updatePreferencesFailed": "We couldn't update your region preferences. Please try again."
+  },
   "footer": {
     "description": "Open-source ecommerce powered by Spree REST API, TypeScript SDK, and Next.js. Self-host it. Own your data. Zero platform fees.",
     "forkOnGithub": "Fork this storefront on GitHub",
