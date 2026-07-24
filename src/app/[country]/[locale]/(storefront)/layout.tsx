@@ -2,8 +2,8 @@ import type { Category } from "@spree/sdk";
 import Link from "next/link";
 import { connection } from "next/server";
 import { cache, Suspense } from "react";
-import { Footer } from "@/components/layout/Footer";
-import { Header } from "@/components/layout/Header";
+import { Footer, FooterCategoryLinks } from "@/components/layout/Footer";
+import { Header, HeaderMobileMenu } from "@/components/layout/Header";
 import { getCategories } from "@/lib/data/categories";
 
 interface StorefrontLayoutProps {
@@ -19,12 +19,29 @@ interface StorefrontNavigationProps {
 
 const EMPTY_CATEGORIES: Category[] = [];
 
+function MobileNavigationFallback() {
+  return (
+    <div
+      aria-hidden="true"
+      className="size-10 rounded-md bg-gray-100 animate-pulse motion-reduce:animate-none"
+    />
+  );
+}
+
+function FooterCategoryLinksFallback() {
+  return (
+    <li aria-hidden="true">
+      <span className="block h-4 w-24 rounded bg-white/10 animate-pulse motion-reduce:animate-none" />
+    </li>
+  );
+}
+
 /**
  * Navigation categories are optional chrome, so defer their first load until
  * there is a real request instead of making every prerendered page contact the
- * Store API. Primitive arguments let React deduplicate Header and Footer calls
- * within the request; successful responses keep using the persistent cache in
- * getCategories.
+ * Store API. Primitive arguments let React deduplicate category navigation
+ * consumers within the request; successful responses keep using the persistent
+ * cache in getCategories.
  */
 const getRootCategories = cache(async (country: string, locale: string) => {
   await connection();
@@ -66,7 +83,7 @@ function CategoryLinks({
   );
 }
 
-async function StorefrontHeader({
+async function StorefrontMobileNavigation({
   basePath,
   country,
   locale,
@@ -74,22 +91,27 @@ async function StorefrontHeader({
   const rootCategories = await getRootCategories(country, locale);
 
   return (
-    <>
-      <Header
-        rootCategories={rootCategories}
-        basePath={basePath}
-        locale={locale as Locale}
-      />
-      {rootCategories.length > 0 && (
-        <nav aria-label="Category navigation" className="sr-only">
-          <CategoryLinks categories={rootCategories} basePath={basePath} />
-        </nav>
-      )}
-    </>
+    <HeaderMobileMenu rootCategories={rootCategories} basePath={basePath} />
   );
 }
 
-async function StorefrontFooter({
+async function StorefrontCategoryNavigation({
+  basePath,
+  country,
+  locale,
+}: StorefrontNavigationProps) {
+  const rootCategories = await getRootCategories(country, locale);
+
+  if (rootCategories.length === 0) return null;
+
+  return (
+    <nav aria-label="Category navigation" className="sr-only">
+      <CategoryLinks categories={rootCategories} basePath={basePath} />
+    </nav>
+  );
+}
+
+async function StorefrontFooterCategoryLinks({
   basePath,
   country,
   locale,
@@ -97,11 +119,7 @@ async function StorefrontFooter({
   const rootCategories = await getRootCategories(country, locale);
 
   return (
-    <Footer
-      rootCategories={rootCategories}
-      basePath={basePath}
-      locale={locale as Locale}
-    />
+    <FooterCategoryLinks rootCategories={rootCategories} basePath={basePath} />
   );
 }
 
@@ -114,37 +132,40 @@ export default async function StorefrontLayout({
 
   return (
     <>
-      <Suspense
-        fallback={
-          <Header
-            rootCategories={EMPTY_CATEGORIES}
-            basePath={basePath}
-            locale={locale as Locale}
-          />
+      <Header
+        basePath={basePath}
+        locale={locale as Locale}
+        mobileNavigation={
+          <Suspense fallback={<MobileNavigationFallback />}>
+            <StorefrontMobileNavigation
+              basePath={basePath}
+              country={country}
+              locale={locale}
+            />
+          </Suspense>
         }
-      >
-        <StorefrontHeader
+      />
+      <Suspense fallback={null}>
+        <StorefrontCategoryNavigation
           basePath={basePath}
           country={country}
           locale={locale}
         />
       </Suspense>
       <main className="flex-1">{children}</main>
-      <Suspense
-        fallback={
-          <Footer
-            rootCategories={EMPTY_CATEGORIES}
-            basePath={basePath}
-            locale={locale as Locale}
-          />
+      <Footer
+        basePath={basePath}
+        locale={locale as Locale}
+        categoryLinks={
+          <Suspense fallback={<FooterCategoryLinksFallback />}>
+            <StorefrontFooterCategoryLinks
+              basePath={basePath}
+              country={country}
+              locale={locale}
+            />
+          </Suspense>
         }
-      >
-        <StorefrontFooter
-          basePath={basePath}
-          country={country}
-          locale={locale}
-        />
-      </Suspense>
+      />
     </>
   );
 }
