@@ -19,7 +19,7 @@ export async function getCategories(params?: CategoryListParams) {
   return cachedListCategories(params, options);
 }
 
-async function cachedGetCategory(
+export async function cachedGetCategory(
   idOrPermalink: string,
   params: { expand?: string[] } | undefined,
   options: { locale?: string; country?: string },

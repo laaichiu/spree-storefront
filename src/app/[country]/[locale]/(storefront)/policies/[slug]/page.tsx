@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { getPolicy } from "@/lib/data/policies";
-import { buildCanonicalUrl } from "@/lib/seo";
+import { cachedGetPolicy, getPolicy } from "@/lib/data/policies";
+import {
+  buildLocalizedAlternates,
+  translationFingerprint,
+} from "@/lib/metadata/alternates";
 import { getStoreName, getStoreUrl } from "@/lib/store";
 
 interface PolicyPageProps {
@@ -17,7 +20,7 @@ export async function generateMetadata({
   params,
 }: PolicyPageProps): Promise<Metadata> {
   const { country, locale, slug } = await params;
-  const policy = await getPolicy(slug);
+  const policy = await getPolicy(slug, { country, locale });
 
   const storeName = getStoreName();
 
@@ -34,21 +37,40 @@ export async function generateMetadata({
 
   const description = `${policy.name} — ${storeName}`;
   const storeUrl = getStoreUrl();
-  const canonicalUrl = storeUrl
-    ? buildCanonicalUrl(
+  const localizedAlternates = storeUrl
+    ? await buildLocalizedAlternates({
         storeUrl,
-        `/${country}/${locale}/policies/${policy.slug}`,
-      )
+        country,
+        locale,
+        path: `/policies/${policy.slug}`,
+        currentResourceFingerprint: policyTranslationFingerprint(policy),
+        resolvePath: async (target) => {
+          const localizedPolicy = await cachedGetPolicy(policy.id, target);
+          return localizedPolicy
+            ? {
+                path: `/policies/${localizedPolicy.slug}`,
+                fingerprint: policyTranslationFingerprint(localizedPolicy),
+              }
+            : undefined;
+        },
+      })
     : undefined;
 
   return {
     title: policy.name,
     description,
-    ...(canonicalUrl ? { alternates: { canonical: canonicalUrl } } : {}),
+    ...(localizedAlternates
+      ? {
+          alternates: {
+            canonical: localizedAlternates.canonical,
+            languages: localizedAlternates.languages,
+          },
+        }
+      : {}),
     openGraph: {
       title: policy.name,
       description,
-      ...(canonicalUrl ? { url: canonicalUrl } : {}),
+      ...(localizedAlternates ? { url: localizedAlternates.canonical } : {}),
     },
   };
 }
@@ -56,9 +78,9 @@ export async function generateMetadata({
 export default async function PolicyPage({
   params,
 }: PolicyPageProps): Promise<React.JSX.Element> {
-  const { slug, locale } = await params;
+  const { country, slug, locale } = await params;
   const [policy, t] = await Promise.all([
-    getPolicy(slug),
+    getPolicy(slug, { country, locale }),
     getTranslations({ locale: locale as Locale, namespace: "policies" }),
   ]);
 
@@ -82,5 +104,19 @@ export default async function PolicyPage({
         <p className="text-gray-500">{t("noContent")}</p>
       )}
     </div>
+  );
+}
+
+function policyTranslationFingerprint(policy: {
+  name: string;
+  slug: string;
+  body: string | null;
+  body_html: string | null;
+}): string {
+  return translationFingerprint(
+    policy.name,
+    policy.slug,
+    policy.body,
+    policy.body_html,
   );
 }
