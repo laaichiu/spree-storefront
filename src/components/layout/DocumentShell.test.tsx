@@ -18,7 +18,7 @@ vi.mock("@vercel/speed-insights/next", () => ({
 }));
 
 describe("DocumentShell", () => {
-  it("renders the route locale and document direction", () => {
+  it("renders the route locale and tolerates extension root mutations", () => {
     const document = DocumentShell({
       children: <main>Storefront</main>,
       locale: "de",
@@ -27,6 +27,7 @@ describe("DocumentShell", () => {
     expect(document.type).toBe("html");
     expect(document.props.lang).toBe("de");
     expect(document.props.dir).toBe("ltr");
+    expect(document.props.suppressHydrationWarning).toBe(true);
   });
 
   it("sets the document direction for RTL language tags", () => {

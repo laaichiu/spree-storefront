@@ -30,7 +30,7 @@ interface DocumentShellProps {
 /** Shared document markup for each root layout. */
 export function DocumentShell({ children, locale }: DocumentShellProps) {
   return (
-    <html lang={locale} dir={localeDirection(locale)}>
+    <html lang={locale} dir={localeDirection(locale)} suppressHydrationWarning>
       {/* biome-ignore lint/style/noHeadElement: this shell is used only by Next.js root layouts */}
       <head>
         {spreeApiOrigin && (
