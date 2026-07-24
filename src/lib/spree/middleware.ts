@@ -107,7 +107,7 @@ export function createSpreeMiddleware(
       const originalPrefix = `/${match[1]}/${match[2]}`;
       const locale =
         supportedLocales.length > 0
-          ? matchLocale(match[2], supportedLocales)
+          ? negotiateLocale(match[2], supportedLocales)
           : canonicalizeLocale(match[2]);
 
       // An unknown locale cannot safely retain the requested country: the
